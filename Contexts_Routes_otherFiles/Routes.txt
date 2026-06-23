@@ -1,0 +1,84 @@
+Here is a comprehensive list of the routes defined in your application, split by the Angular Frontend (what the user sees in the browser) and the Spring Boot Backend (the API endpoints).
+
+### 🌐 Angular Frontend Routes (Browser URLs)
+
+**Public Routes**
+*   `/` (Landing Page)
+*   `/login` (Login)
+*   `/register` (Registration)
+*   `/forgot-password` (Request password reset)
+*   `/reset-password` (Complete password reset)
+*   `/403` (Forbidden / Access Denied page)
+
+**Shared Authenticated Route**
+*   `/profile` (User Profile configuration)
+
+**Admin Workspace (`/admin/**`)**
+*   `/admin/dashboard`
+*   `/admin/users` (User Management)
+*   `/admin/courses`
+*   `/admin/modules`
+*   `/admin/enrollments`
+*   `/admin/audit-logs`
+*   `/admin/manage-links/global-links`
+*   `/admin/manage-links/function-links`
+*   `/admin/manage-links/primary-links`
+*   `/admin/manage-links/role-master`
+*   `/admin/manage-links/permissions`
+
+**Trainer Workspace (`/trainer/**`)**
+*   `/trainer/dashboard`
+*   `/trainer/courses`
+*   `/trainer/modules`
+*   `/trainer/enrollments`
+
+**Student Workspace (`/student/**`)**
+*   `/student/dashboard`
+*   `/student/my-courses`
+*   `/student/browse-courses`
+
+*(Note: Thanks to our recent update, a custom role user can access any of the Admin, Trainer, or Student paths above, provided you have assigned them the corresponding `FunctionLink` permission!)*
+
+---
+
+### ⚙️ Spring Boot Backend API Routes (`/api/**`)
+
+**Authentication & Public (`/api/auth/**`)**
+*   `/api/auth/login`
+*   `/api/auth/register`
+*   `/api/auth/logout`
+*   `/api/auth/roles` (Fetch available roles for registration)
+*   `/api/auth/csrf` (Get CSRF token)
+*   `/api/auth/session` (Refresh/validate session)
+*   `/api/auth/forgot-password`
+*   `/api/auth/reset-password`
+*   `/api/auth/reset-password/validate`
+*   `/api/auth/oauth2/**` (OAuth2 / Google Login endpoints)
+
+**Admin Endpoints (`/api/admin/**`)**
+*   `/api/admin/users` (GET, POST, PUT, DELETE, PATCH toggles)
+*   `/api/admin/courses` (GET, POST, PUT, DELETE)
+*   `/api/admin/modules` (GET, POST, PUT, DELETE)
+*   `/api/admin/enrollments` (GET)
+*   `/api/admin/audit-logs` (GET)
+*   `/api/admin/security-events` (GET)
+*   `/api/admin/global-links` (GET, POST, PUT, DELETE)
+*   `/api/admin/function-links` (GET, POST, PUT, DELETE)
+*   `/api/admin/primary-links` (GET, POST, PUT, DELETE)
+*   `/api/admin/role-master` (GET, POST, PUT, DELETE)
+*   `/api/admin/permissions` (GET, POST)
+
+**Trainer Endpoints (`/api/trainer/**`)**
+*   `/api/trainer/courses` (Manage trainer's courses)
+*   `/api/trainer/modules` (Manage course modules)
+*   `/api/trainer/enrollments` (View student enrollments)
+
+**Student Endpoints (`/api/student/**`)**
+*   `/api/student/my-courses` (View enrolled courses)
+*   `/api/student/browse-courses` (Browse available courses to enroll)
+
+**Export / Download Endpoints (`/api/export/**`)**
+*   `/api/export/courses/pdf`
+*   `/api/export/modules/pdf`
+*   `/api/export/enrollments/pdf`
+*   `/api/export/my-enrollments/pdf` (For students)
