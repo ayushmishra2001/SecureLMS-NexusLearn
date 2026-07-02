@@ -492,3 +492,148 @@ WHERE NOT EXISTS (
 -- Verification
 -- ============================================================
 SHOW TABLES;
+select * from users
+
+
+--=============================================================
+-- Make sure to replace 'superadmin' with your actual username if it's different!
+UPDATE users 
+SET 
+    created_at = DATE_SUB(NOW(), INTERVAL 18 DAY),
+    password_changed_at = DATE_SUB(NOW(), INTERVAL 18 DAY),
+    contact_number= 6204257138
+WHERE username = 'ayushmishra';
+
+select * from users
+
+--=============================================================
+
+use  secure_lms_db;
+-- 1. Country
+CREATE TABLE loc_country (
+    country_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    country_code VARCHAR(50) UNIQUE NOT NULL,
+    country_name VARCHAR(100) NOT NULL,
+    iso_code VARCHAR(10),
+    status VARCHAR(20) DEFAULT 'ACTIVE',
+    created_by VARCHAR(100),
+    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_by VARCHAR(100),
+    updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- 2. State
+CREATE TABLE loc_state (
+    state_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    country_id BIGINT NOT NULL,
+    state_code VARCHAR(50) UNIQUE NOT NULL,
+    state_name VARCHAR(100) NOT NULL,
+    status VARCHAR(20) DEFAULT 'ACTIVE',
+    created_by VARCHAR(100),
+    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_by VARCHAR(100),
+    updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_state_country FOREIGN KEY (country_id) REFERENCES loc_country(country_id),
+    CONSTRAINT uk_state_name_country UNIQUE (state_name, country_id)
+);
+
+-- 3. District
+CREATE TABLE loc_district (
+    district_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    state_id BIGINT NOT NULL,
+    country_id BIGINT NOT NULL, -- Denormalized
+    district_code VARCHAR(50) UNIQUE NOT NULL,
+    district_name VARCHAR(100) NOT NULL,
+    status VARCHAR(20) DEFAULT 'ACTIVE',
+    created_by VARCHAR(100),
+    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_by VARCHAR(100),
+    updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_dist_state FOREIGN KEY (state_id) REFERENCES loc_state(state_id),
+    CONSTRAINT fk_dist_country FOREIGN KEY (country_id) REFERENCES loc_country(country_id),
+    CONSTRAINT uk_dist_name_state UNIQUE (district_name, state_id)
+);
+
+-- 4. Block
+CREATE TABLE loc_block (
+    block_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    district_id BIGINT NOT NULL,
+    state_id BIGINT NOT NULL,   -- Denormalized
+    country_id BIGINT NOT NULL, -- Denormalized
+    block_code VARCHAR(50) UNIQUE NOT NULL,
+    block_name VARCHAR(100) NOT NULL,
+    status VARCHAR(20) DEFAULT 'ACTIVE',
+    created_by VARCHAR(100),
+    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_by VARCHAR(100),
+    updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_block_dist FOREIGN KEY (district_id) REFERENCES loc_district(district_id),
+    CONSTRAINT uk_block_name_dist UNIQUE (block_name, district_id)
+);
+
+-- 5. Panchayat
+CREATE TABLE loc_panchayat (
+    panchayat_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    block_id BIGINT NOT NULL,
+    district_id BIGINT NOT NULL, -- Denormalized
+    state_id BIGINT NOT NULL,    -- Denormalized
+    country_id BIGINT NOT NULL,  -- Denormalized
+    panchayat_code VARCHAR(50) UNIQUE NOT NULL,
+    panchayat_name VARCHAR(100) NOT NULL,
+    status VARCHAR(20) DEFAULT 'ACTIVE',
+    created_by VARCHAR(100),
+    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_by VARCHAR(100),
+    updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_panch_block FOREIGN KEY (block_id) REFERENCES loc_block(block_id),
+    CONSTRAINT uk_panch_name_block UNIQUE (panchayat_name, block_id)
+);
+
+-- 6. Village
+CREATE TABLE loc_village (
+    village_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    panchayat_id BIGINT NOT NULL,
+    block_id BIGINT NOT NULL,    -- Denormalized
+    district_id BIGINT NOT NULL, -- Denormalized
+    state_id BIGINT NOT NULL,    -- Denormalized
+    country_id BIGINT NOT NULL,  -- Denormalized
+    village_code VARCHAR(50) UNIQUE NOT NULL,
+    village_name VARCHAR(100) NOT NULL,
+    population INT,
+    pin_code VARCHAR(20),
+    latitude VARCHAR(50),
+    longitude VARCHAR(50),
+    status VARCHAR(20) DEFAULT 'ACTIVE',
+    created_by VARCHAR(100),
+    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_by VARCHAR(100),
+    updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_vill_panch FOREIGN KEY (panchayat_id) REFERENCES loc_panchayat(panchayat_id),
+    CONSTRAINT uk_vill_name_panch UNIQUE (village_name, panchayat_id)
+);
+
+-- 7. Audit Log
+CREATE TABLE loc_audit_log (
+    audit_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    entity_type VARCHAR(50) NOT NULL,
+    entity_id BIGINT NOT NULL,
+    action VARCHAR(20) NOT NULL,
+    old_value JSON,
+    new_value JSON,
+    performed_by VARCHAR(100),
+    performed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE loc_village 
+ADD COLUMN pin_code VARCHAR(10) DEFAULT NULL;
+
+
+show tables;
+
+select * from loc_audit_log;
+select * from loc_block;
+select * from loc_country;
+select * from loc_district;
+select * from loc_panchayat;
+select * from loc_state;
+select * from loc_village;
