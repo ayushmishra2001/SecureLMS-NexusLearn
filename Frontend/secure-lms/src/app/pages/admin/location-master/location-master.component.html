@@ -1,0 +1,282 @@
+<app-dashboard-layout
+  [navGroups]="navGroups"
+  [activeSection]="activeSection"
+  [pageTitle]="pageTitle"
+  roleLabel="Administrator"
+  (sectionChange)="onSectionChange($event)">
+
+  <mat-tab-group #tabGroup animationDuration="0ms">
+    <mat-tab label="{{ isEdit ? 'Edit' : 'Add' }} Location">
+      <section class="card" style="margin-top:20px;">
+        <div class="card-header">
+          <div class="card-title">{{ isEdit ? 'Edit' : 'Add' }} {{ selectedLevel | titlecase }}</div>
+        </div>
+        <div class="card-body">
+          <form [formGroup]="form" (ngSubmit)="saveLocation()">
+            <div class="form-grid">
+              
+              <div class="form-group">
+                <label>Level <span class="text-danger">*</span></label>
+                <select class="form-control" formControlName="level" [attr.disabled]="isEdit ? true : null" [ngClass]="{'is-invalid': form.get('level')?.invalid && form.get('level')?.touched}">
+                  @for (lvl of levels; track lvl.value) {
+                    <option [value]="lvl.value">{{ lvl.label }}</option>
+                  }
+                </select>
+                <div *ngIf="form.get('level')?.invalid && form.get('level')?.touched" class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">
+                  Level is required.
+                </div>
+              </div>
+
+              <!-- Cascading Dropdowns -->
+              <ng-container *ngIf="selectedLevel !== 'country'">
+                <div class="form-group">
+                  <label>Country <span class="text-danger">*</span></label>
+                  <select class="form-control" formControlName="countryId" [ngClass]="{'is-invalid': form.get('countryId')?.invalid && form.get('countryId')?.touched}">
+                    <option value="">Select Country</option>
+                    @for (c of countries; track c.id) {
+                      <option [value]="c.id">{{ c.name }}</option>
+                    }
+                  </select>
+                  <div *ngIf="form.get('countryId')?.invalid && form.get('countryId')?.touched" class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">
+                    Country is required.
+                  </div>
+                </div>
+                
+                <div class="form-group" *ngIf="selectedLevel === 'district' || selectedLevel === 'block' || selectedLevel === 'panchayat' || selectedLevel === 'village'">
+                  <label>State <span class="text-danger">*</span></label>
+                  <select class="form-control" formControlName="stateId" [ngClass]="{'is-invalid': form.get('stateId')?.invalid && form.get('stateId')?.touched}">
+                    <option value="">Select State</option>
+                    @for (s of states; track s.id) {
+                      <option [value]="s.id">{{ s.name }}</option>
+                    }
+                  </select>
+                  <div *ngIf="form.get('stateId')?.invalid && form.get('stateId')?.touched" class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">
+                    State is required.
+                  </div>
+                </div>
+
+                <div class="form-group" *ngIf="selectedLevel === 'block' || selectedLevel === 'panchayat' || selectedLevel === 'village'">
+                  <label>District <span class="text-danger">*</span></label>
+                  <select class="form-control" formControlName="districtId" [ngClass]="{'is-invalid': form.get('districtId')?.invalid && form.get('districtId')?.touched}">
+                    <option value="">Select District</option>
+                    @for (d of districts; track d.id) {
+                      <option [value]="d.id">{{ d.name }}</option>
+                    }
+                  </select>
+                  <div *ngIf="form.get('districtId')?.invalid && form.get('districtId')?.touched" class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">
+                    District is required.
+                  </div>
+                </div>
+
+                <div class="form-group" *ngIf="selectedLevel === 'panchayat' || selectedLevel === 'village'">
+                  <label>Block <span class="text-danger">*</span></label>
+                  <select class="form-control" formControlName="blockId" [ngClass]="{'is-invalid': form.get('blockId')?.invalid && form.get('blockId')?.touched}">
+                    <option value="">Select Block</option>
+                    @for (b of blocks; track b.id) {
+                      <option [value]="b.id">{{ b.name }}</option>
+                    }
+                  </select>
+                  <div *ngIf="form.get('blockId')?.invalid && form.get('blockId')?.touched" class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">
+                    Block is required.
+                  </div>
+                </div>
+
+                <div class="form-group" *ngIf="selectedLevel === 'village'">
+                  <label>Panchayat <span class="text-danger">*</span></label>
+                  <select class="form-control" formControlName="panchayatId" [ngClass]="{'is-invalid': form.get('panchayatId')?.invalid && form.get('panchayatId')?.touched}">
+                    <option value="">Select Panchayat</option>
+                    @for (p of panchayats; track p.id) {
+                      <option [value]="p.id">{{ p.name }}</option>
+                    }
+                  </select>
+                  <div *ngIf="form.get('panchayatId')?.invalid && form.get('panchayatId')?.touched" class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">
+                    Panchayat is required.
+                  </div>
+                </div>
+              </ng-container>
+
+              <ng-container *ngIf="selectedLevel !== 'village'">
+                <div class="form-group">
+                  <label>{{ selectedLevel | titlecase }} Code <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" formControlName="code" [placeholder]="isAutoGenerated(selectedLevel) ? 'Auto-generated' : 'Enter code'" [ngClass]="{'is-invalid': form.get('code')?.invalid && form.get('code')?.touched}">
+                  <div *ngIf="form.get('code')?.invalid && form.get('code')?.touched">
+                    <div *ngIf="form.get('code')?.errors?.['required']" class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">Code is required.</div>
+                    <div *ngIf="form.get('code')?.errors?.['duplicate']" class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">Code must be unique.</div>
+                  </div>
+                </div>
+              </ng-container>
+              <div class="form-group">
+                <label>{{ selectedLevel | titlecase }} Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="name" formControlName="name" placeholder="Enter name" [ngClass]="{'is-invalid': form.get('name')?.invalid && (form.get('name')?.dirty || form.get('name')?.touched)}">
+                <div *ngIf="form.get('name')?.invalid && (form.get('name')?.dirty || form.get('name')?.touched)">
+                  <div *ngIf="form.get('name')?.errors?.['required']" class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">Name is required.</div>
+                  <div *ngIf="form.get('name')?.errors?.['pattern']" class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">Name can only contain alphabetic characters and spaces.</div>
+                  <div *ngIf="form.get('name')?.errors?.['duplicate']" class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">Name must be unique.</div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Status <span class="text-danger">*</span></label>
+                <select class="form-control" formControlName="status">
+                  <option value="ACTIVE">Active</option>
+                  <option value="INACTIVE">Inactive</option>
+                </select>
+              </div>
+
+              <div class="form-group full-width form-actions mt-4">
+                <button type="submit" class="btn btn-primary">{{ isEdit ? 'Update' : 'Save' }}</button>
+                <button type="button" class="btn btn-secondary" style="margin-left:10px;" (click)="cancelEdit()">Clear</button>
+              </div>
+
+            </div>
+          </form>
+        </div>
+      </section>
+    </mat-tab>
+
+    <mat-tab label="View List">
+      <section class="card" style="margin-top:20px;">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <div class="card-title">Location Data</div>
+          
+          <div class="d-flex align-items-center gap-2">
+            <select class="form-control form-control-sm" [(ngModel)]="filterLevel" (change)="onViewFilterChange()">
+               @for (lvl of levels; track lvl.value) {
+                 <option [value]="lvl.value">{{ lvl.label }}</option>
+               }
+            </select>
+            <!-- Add filters if needed -->
+          </div>
+        </div>
+        
+        <div class="card-body table-wrap">
+          <table *ngIf="locations.length > 0; else noData">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Code</th>
+                <th>Name</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (loc of locations; track loc.id; let i = $index) {
+                <tr>
+                  <td>{{ i + 1 }}</td>
+                  <td>{{ loc.code || '-' }}</td>
+                  <td><strong>{{ loc.name }}</strong></td>
+                  <td><span class="status-pill" [class.inactive]="loc.status === 'INACTIVE'">{{ loc.status | titlecase }}</span></td>
+                  <td>
+                    <button class="btn btn-secondary btn-icon btn-sm" (click)="openForm(loc)" title="Edit"><span class="material-symbols-outlined">edit</span></button>
+                    <button class="btn btn-danger btn-icon btn-sm" (click)="confirmDeactivate(loc)" [disabled]="loc.status === 'INACTIVE'" title="Deactivate"><span class="material-symbols-outlined">do_not_disturb_on</span></button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          <ng-template #noData>
+            <div class="no-data-msg">No locations found.</div>
+          </ng-template>
+        </div>
+      </section>
+    </mat-tab>
+    
+    <mat-tab label="Audit Log">
+      <section class="card" style="margin-top:20px;">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <div class="card-title">Audit History</div>
+          <div class="d-flex align-items-center gap-2">
+            <select class="form-control form-control-sm" [(ngModel)]="auditTabLevel" (change)="onAuditFilterChange()">
+               @for (lvl of levels; track lvl.value) {
+                 <option [value]="lvl.value">{{ lvl.label }}</option>
+               }
+            </select>
+          </div>
+        </div>
+        
+        <div class="card-body table-wrap" style="max-height: 500px; overflow-y: auto;">
+          <table *ngIf="auditLogs.length > 0; else noAudit">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Action</th>
+                <th>Entity ID</th>
+                <th>User</th>
+                <th>Changes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let log of auditLogs">
+                <td style="white-space: nowrap;">{{ log.performedAt | date:'medium' }}</td>
+                <td>
+                  <span class="status-pill" [class.inactive]="log.action === 'DEACTIVATE'" [class.active]="log.action === 'CREATE'">
+                    {{ log.action }}
+                  </span>
+                </td>
+                <td>{{ log.entityId }}</td>
+                <td>{{ log.performedBy || 'SYSTEM' }}</td>
+                <td style="font-size: 13px;">
+                  <ul class="mb-0 pl-3" style="list-style-type: disc; padding-left: 20px;">
+                    <li *ngFor="let change of log.parsedChanges" style="margin-bottom: 4px;">
+                      <strong>{{ change.field | titlecase }}:</strong> 
+                      <ng-container *ngIf="log.action === 'UPDATE' || log.action === 'DEACTIVATE'">
+                        <span class="text-danger text-decoration-line-through">{{ change.old || 'null' }}</span>
+                        <span class="material-symbols-outlined" style="font-size: 12px; vertical-align: middle; margin: 0 4px;">arrow_forward</span>
+                      </ng-container>
+                      <span class="text-success">{{ change.new || 'null' }}</span>
+                    </li>
+                  </ul>
+                  <div *ngIf="log.parsedChanges?.length === 0" class="text-muted">No details</div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <ng-template #noAudit>
+            <div class="no-data-msg">No audit logs found for this level.</div>
+          </ng-template>
+        </div>
+      </section>
+    </mat-tab>
+    <!-- Tab 2: Bulk Import -->
+    <mat-tab label="Bulk Import">
+      <div class="card p-4 m-3 shadow-sm border-0">
+        <h3 class="mb-3">Bulk Import Locations via CSV</h3>
+        <p class="text-muted">Download the standard template, fill it with your real-world location data (Country down to Village), and upload it here.</p>
+        
+        <div class="mb-4">
+          <button class="btn btn-outline-primary" (click)="downloadTemplate()">
+            <i class="fas fa-download me-2"></i> Download CSV Template
+          </button>
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label fw-bold">Upload CSV File</label>
+          <input type="file" class="form-control" accept=".csv" (change)="onFileSelected($event)">
+        </div>
+
+        <button class="btn btn-primary" [disabled]="!selectedFile || isImporting" (click)="uploadLocations()">
+          <i class="fas fa-upload me-2" *ngIf="!isImporting"></i>
+          <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" *ngIf="isImporting"></span>
+          {{ isImporting ? 'Importing... Please wait' : 'Upload & Import' }}
+        </button>
+
+        <div class="alert alert-success mt-3" *ngIf="importSuccessMessage">
+          {{ importSuccessMessage }}
+        </div>
+      </div>
+    </mat-tab>
+
+  </mat-tab-group>
+</app-dashboard-layout>
+
+<app-confirm-dialog
+  [isOpen]="showConfirm"
+  title="Deactivate Location"
+  message="Are you sure you want to deactivate this location? This is a soft delete."
+  confirmText="Deactivate"
+  (confirm)="handleDeactivateConfirm(true)"
+  (cancel)="handleDeactivateConfirm(false)">
+</app-confirm-dialog>
+
+
+

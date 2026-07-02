@@ -78,13 +78,7 @@ export const ROLE_SECTION_ROUTES: Record<Role, Record<string, string>> = {
   STUDENT: STUDENT_SECTION_ROUTES
 };
 
-export const ADMIN_NAV_GROUPS: { label: string; items: NavItem[] }[] = [
-  {
-    label: 'Administration',
-    items: [
-    ]
-  }
-];
+export const ADMIN_NAV_GROUPS: { label: string; items: NavItem[] }[] = [];
 
 export const TRAINER_NAV_GROUPS: { label: string; items: NavItem[] }[] = [];
 

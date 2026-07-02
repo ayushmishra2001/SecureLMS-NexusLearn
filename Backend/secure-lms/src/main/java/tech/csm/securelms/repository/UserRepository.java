@@ -15,6 +15,8 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
     Optional<User> findByUsername(String username);
 
+    Optional<User> findByContactNumber(String contactNumber);
+
     /** Lookup by HMAC hash - always deterministic */
     Optional<User> findByEmailHash(String emailHash);
 

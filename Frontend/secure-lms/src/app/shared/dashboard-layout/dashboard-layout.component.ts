@@ -15,44 +15,138 @@ import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { MenuService } from '../../core/services/menu.service';
 import { ToastService } from '../../core/services/toast.service';
+import { ApiService } from '../../core/services/api.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { NavItem } from '../../core/models';
 import { fadeIn } from '../animations';
 import { PasswordExpiryBannerComponent } from '../password-expiry-banner/password-expiry-banner.component';
+import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
 import { resolveRoleRoutePath, routesMatchForRole } from '../../core/navigation/app-routes';
 import { Subscription, filter } from 'rxjs';
 
 @Component({
   selector: 'app-dashboard-layout',
   standalone: true,
-  imports: [CommonModule, RouterModule, PasswordExpiryBannerComponent],
+  imports: [CommonModule, RouterModule, PasswordExpiryBannerComponent, BreadcrumbComponent],
   animations: [fadeIn],
   template: `
     <div class="dashboard" [class.resizing]="isResizingSidebar">
-      <aside
-        class="sidebar"
-        [class.collapsed]="sidebarCollapsed"
-        [style.width.px]="effectiveSidebarWidth"
-        [style.minWidth.px]="effectiveSidebarWidth"
-      >
-        <div class="sidebar-header">
-          <div class="sidebar-logo">
-            <div class="logo-icon">school</div>
-            @if (!sidebarCollapsed) {
-              <span class="logo-text">Secure<strong>LMS</strong></span>
-            }
+      <!-- GLOBAL HEADER -->
+      <header class="global-header">
+        <div class="header-left">
+          <button
+            class="collapse-btn"
+            (click)="toggleSidebarCollapsed()"
+            [title]="sidebarCollapsed ? 'Expand' : 'Collapse'"
+            [attr.aria-label]="sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+          >
+            <span class="collapse-icon material-symbols-outlined">{{ sidebarCollapsed ? 'menu' : 'menu_open' }}</span>
+          </button>
+          <div class="header-brand">
+            <!--<img src="/assets/images/bihar_logo.png" alt="Bihar Logo" class="header-logo" /> -->
+            <span class="header-title">SecureLms</span>
           </div>
-          <div class="user-badge">
-            <div class="user-avatar">{{ userInitial }}</div>
-            @if (!sidebarCollapsed) {
-              <div class="user-info">
-                <div class="user-name">{{ user?.username }}</div>
-                <div class="user-role">{{ roleLabel }}</div>
-              </div>
-            }
-          </div>
+
         </div>
 
-        <nav class="nav" aria-label="Primary navigation">
+        <div class="header-right">
+          <div class="notif-wrap" #notifWrap>
+            <button
+              type="button"
+              class="notif-bell"
+              title="Notifications"
+              aria-label="Notifications"
+              (click)="toggleNotifications($event)"
+            >
+              <span class="bell-icon material-symbols-outlined">notifications</span>
+              @if (notifService.hasUnread) { <span class="notif-dot"></span> }
+            </button>
+
+            <div
+              class="notif-panel"
+              [class.open]="isNotificationPanelVisible"
+              (click)="$event.stopPropagation()"
+            >
+              <div class="notif-header">
+                <span>Notifications</span>
+                @if (notifService.notifications().length > 0) {
+                  <button class="clear-btn" (click)="notifService.clearAll()">Clear All</button>
+                }
+              </div>
+
+              @if (notifService.loading()) {
+                <div class="notif-empty">Loading notifications...</div>
+              } @else if (notifService.notifications().length > 0) {
+                <div class="notif-list">
+                  @for (notif of notifService.notifications(); track notif.id) {
+                    @if (notif.type === 'PASSWORD_EXPIRY') {
+                      <app-password-expiry-banner
+                        [status]="notif.data"
+                        [inPopover]="true"
+                        (dismissed)="notifService.dismissPasswordWarning()"
+                      />
+                    } @else if (notif.type === 'AUDIT_LOG') {
+                      <div class="audit-log-item">
+                        <div class="audit-log-icon" [ngClass]="notif.data.outcome === 'SUCCESS' ? 'success' : 'failure'">
+                          <span class="material-symbols-outlined">
+                            {{ notif.data.eventType.includes('LOGIN') ? 'login' : notif.data.eventType.includes('USER') ? 'person' : 'history' }}
+                          </span>
+                        </div>
+                        <div class="audit-log-content">
+                          <div class="audit-log-title">{{ notif.data.username || notif.data.fullName || 'System' }} {{ notif.data.eventType.toLowerCase().replace('_', ' ') }}</div>
+                          <div class="audit-log-time">{{ notif.data.createdAt | date:'medium' }}</div>
+                        </div>
+                      </div>
+                    }
+                  }
+                </div>
+                @if (auth.role() === 'SUPER_ADMIN') {
+                  <div class="notif-footer" routerLink="/admin/audit-logs">View all audit logs</div>
+                }
+              } @else {
+                <div class="notif-empty">No notifications</div>
+              }
+            </div>
+          </div>
+
+          <!-- User Profile Dropdown -->
+          <div class="profile-wrap" #profileWrap>
+            <div class="user-menu-btn" (click)="toggleProfileMenu($event)">
+              <div class="user-avatar">{{ userInitial }}</div>
+              <span class="user-welcome">Welcome <br> {{ user?.username }}</span>
+              <span class="material-symbols-outlined dropdown-icon">expand_more</span>
+            </div>
+
+            <div class="profile-dropdown" [class.open]="profileMenuOpen">
+              <a class="dropdown-item" routerLink="/profile"><span class="material-symbols-outlined">person</span> My Profile</a>
+              <a class="dropdown-item"><span class="material-symbols-outlined">settings</span> Setting</a>
+              <div class="dropdown-divider"></div>
+              <a class="dropdown-item text-danger" (click)="onLogout()"><span class="material-symbols-outlined">logout</span> Logout</a>
+            </div>
+          </div>
+
+          <!-- Date and Time Display -->
+          <div class="datetime-display">
+            <div class="date">{{ now | date:'dd-MM-yyyy' }}</div>
+            <div class="time">{{ now | date:'hh:mm a' }}</div>
+
+          </div>
+
+          <!-- Dedicated Logout Button -->
+          <button class="header-logout-btn" (click)="onLogout()" title="Logout">
+            <span class="material-symbols-outlined">logout</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="dashboard-body">
+        <aside
+          class="sidebar"
+          [class.collapsed]="sidebarCollapsed"
+          [style.width.px]="effectiveSidebarWidth"
+          [style.minWidth.px]="effectiveSidebarWidth"
+        >
+          <nav class="nav" aria-label="Primary navigation">
           @for (group of navGroups; track group.label) {
             @if (!sidebarCollapsed) {
               <div class="nav-section">{{ group.label }}</div>
@@ -140,427 +234,295 @@ import { Subscription, filter } from 'rxjs';
           }
         </nav>
 
-        <div class="sidebar-footer">
-          <div
-            class="nav-item logout-item"
-            (click)="onLogout()"
-            [title]="sidebarCollapsed ? 'Logout' : ''"
-          >
-            <span class="nav-icon">logout</span>
-            @if (!sidebarCollapsed) { <span>Logout</span> }
-          </div>
+          @if (!sidebarCollapsed) {
+            <div
+              class="sidebar-resize-handle"
+              role="separator"
+              aria-orientation="vertical"
+              title="Drag to resize sidebar"
+              (pointerdown)="startSidebarResize($event)"
+            ></div>
+          }
+        </aside>
+
+        <div class="main-wrapper">
+          <main class="content" [@fadeIn]="activeSection">
+            <app-breadcrumb></app-breadcrumb>
+            <ng-content></ng-content>
+          </main>
+
+          <footer class="global-footer">
+            Secure LMS - NexusLearn
+          </footer>
         </div>
-        @if (!sidebarCollapsed) {
-          <div
-            class="sidebar-resize-handle"
-            role="separator"
-            aria-orientation="vertical"
-            title="Drag to resize sidebar"
-            (pointerdown)="startSidebarResize($event)"
-          ></div>
-        }
-      </aside>
-
-      <div class="main">
-        <header class="topbar">
-          <div class="topbar-left">
-            <button
-              class="collapse-btn"
-              (click)="toggleSidebarCollapsed()"
-              [title]="sidebarCollapsed ? 'Expand' : 'Collapse'"
-              [attr.aria-label]="sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
-            >
-              <span class="collapse-icon">{{ sidebarCollapsed ? 'right_panel_open' : 'left_panel_close' }}</span>
-            </button>
-            <h1 class="page-title">{{ pageTitle }}</h1>
-          </div>
-
-          <div class="topbar-actions">
-            <div class="notif-wrap" #notifWrap>
-              <button
-                type="button"
-                class="notif-bell"
-                title="Notifications"
-                aria-label="Notifications"
-                (click)="toggleNotifications($event)"
-              >
-                <span class="bell-icon">notifications</span>
-                @if (hasPasswordAlert) { <span class="notif-dot"></span> }
-              </button>
-
-              <div
-                class="notif-panel"
-                [class.open]="isNotificationPanelVisible"
-                (click)="$event.stopPropagation()"
-              >
-                <app-password-expiry-banner
-                  [inPopover]="true"
-                  (visibilityChange)="onPasswordBannerVisibilityChange($event)"
-                />
-                @if (!hasPasswordAlert) {
-                  <div class="notif-empty">No notifications</div>
-                }
-              </div>
-            </div>
-
-            <ng-content select="[slot=topbar-actions]" />
-          </div>
-        </header>
-
-        <main class="content" [@fadeIn]="activeSection">
-          <ng-content></ng-content>
-        </main>
       </div>
     </div>
   `,
   styles: [`
-    .dashboard { display: flex; height: 100vh; overflow: hidden; }
+    /* GLOBAL LAYOUT */
+    .dashboard { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    .dashboard-body { display: flex; flex: 1; overflow: hidden; position: relative; }
+    .main-wrapper { display: flex; flex-direction: column; flex: 1; overflow: hidden; background: #f3f4f6; }
+    .content { flex: 1; overflow-y: auto; padding: 20px 28px 28px; }
     .dashboard.resizing { cursor: col-resize; user-select: none; }
-
-    .sidebar {
-      background: var(--surface);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      transition: width .3s cubic-bezier(.4,0,.2,1), min-width .3s;
-      position: relative;
-      z-index: 10;
-    }
     .dashboard.resizing .sidebar { transition: none; }
-    .sidebar.collapsed { width: 72px !important; min-width: 72px !important; }
 
-    .sidebar-header {
-      padding: 18px 14px;
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-    .sidebar.collapsed .sidebar-header { padding-inline: 12px; }
-
-    .sidebar-logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 16px;
-      min-width: 0;
-    }
-    .logo-icon {
-      width: 38px;
-      height: 38px;
-      background: var(--primary);
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      flex-shrink: 0;
-      box-shadow: 0 2px 8px rgba(79,70,229,.3);
-    }
-    .logo-text {
-      font-size: 16px;
-      color: var(--text);
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-    }
-    .logo-text strong { color: var(--primary); }
-
-    .user-badge {
-      background: var(--surface-2);
-      border-radius: 10px;
-      padding: 10px 12px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      border: 1px solid var(--border);
-      min-width: 0;
-    }
-    .sidebar.collapsed .user-badge { justify-content: center; padding-inline: 8px; }
-    .user-avatar {
-      width: 34px;
-      height: 34px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--primary), #818cf8);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      font-weight: 700;
+    /* HEADER */
+    .global-header {
+      height: 64px;
+      background: #1d2d5e;
       color: #fff;
-      flex-shrink: 0;
-    }
-    .user-info { overflow: hidden; }
-    .user-name {
-      font-size: 13px;
-      font-weight: 600;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .user-role {
-      font-size: 11px;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: .5px;
-    }
-
-    .nav {
-      padding: 12px 8px;
-      flex: 1;
-      overflow-y: auto;
-      overflow-x: hidden;
-    }
-    .nav-section {
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: .08em;
-      color: var(--text-muted);
-      padding: 12px 10px 6px;
-      font-weight: 600;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .nav-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      min-height: 38px;
-      padding: 9px 10px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text-muted);
-      transition: background .18s, color .18s, transform .18s;
-      margin-bottom: 2px;
-      white-space: nowrap;
-      overflow: hidden;
-      min-width: 0;
-    }
-    .sidebar.collapsed .nav-item { justify-content: center; padding-inline: 8px; }
-    .nav-item:hover { background: var(--surface-2); color: var(--text); }
-    .nav-item.active {
-      background: var(--primary-light);
-      color: var(--primary);
-      font-weight: 700;
-    }
-    .nav-parent {
-      justify-content: flex-start;
-    }
-    .nav-parent .nav-toggle-icon {
-      width: 8px;
-      height: 8px;
-    }
-    .nav-static-children {
-      padding-left: 8px;
-      margin-bottom: 6px;
-    }
-    .nav-item.active .nav-icon { transform: scale(1.1); }
-    .nav-item.logout-item { color: var(--danger); }
-    .nav-item.logout-item:hover { background: rgba(220,38,38,.07); }
-    .nav-icon {
-      font-size: 16px;
-      width: 20px;
-      min-width: 20px;
-      text-align: center;
-      flex-shrink: 0;
-      transition: transform .2s;
-    }
-    .nav-label {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      min-width: 0;
-    }
-    .nav-dynamic-group { font-weight: 700; color: var(--text); }
-    .nav-dynamic-group.collapsed { color: var(--text-muted); }
-    .nav-toggle-icon {
-      display: inline-block;
-      width: 10px;
-      height: 10px;
-      margin-left: auto;
-      border-right: 2px solid currentColor;
-      border-bottom: 2px solid currentColor;
-      transform: rotate(45deg);
-      transition: transform .2s ease;
-    }
-    .nav-toggle-icon.expanded {
-      transform: rotate(135deg);
-    }
-
-    .nav-subgroup {
-      padding-left: 8px;
-      margin-bottom: 4px;
-    }
-    .nav-subgroup-label {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-muted);
-      margin-bottom: 4px;
-      padding-left: 10px;
-    }
-    .nav-subitem {
-      display: flex;
-      align-items: center;
-      gap: 9px;
-      padding: 8px 10px 8px 24px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text-muted);
-      transition: all .18s;
-      margin-bottom: 2px;
-      text-decoration: none;
-      overflow: hidden;
-      white-space: nowrap;
-      min-width: 0;
-    }
-    .nav-static-children .nav-subitem {
-      padding-left: 18px;
-    }
-    .nav-function-link {
-      padding-left: 24px;
-      color: var(--text-muted);
-    }
-    .nav-subitem:hover { background: var(--surface-2); color: var(--text); }
-    .nav-subitem.disabled { color: var(--text-muted); pointer-events: none; }
-    .sidebar-menu-loading {
-      padding: 10px 12px;
-      color: var(--text-muted);
-      font-size: 13px;
-    }
-
-    .sidebar-footer {
-      padding: 12px 8px;
-      border-top: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-
-    .sidebar-resize-handle {
-      position: absolute;
-      top: 0;
-      right: -3px;
-      width: 7px;
-      height: 100%;
-      cursor: col-resize;
-      z-index: 20;
-    }
-    .sidebar-resize-handle::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      left: 3px;
-      width: 1px;
-      background: transparent;
-      transition: background .18s, box-shadow .18s;
-    }
-    .sidebar-resize-handle:hover::after,
-    .dashboard.resizing .sidebar-resize-handle::after {
-      background: var(--primary);
-      box-shadow: 0 0 0 2px rgba(79,70,229,.12);
-    }
-
-    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
-    .topbar {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 14px 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      padding: 0 20px;
       flex-shrink: 0;
-      box-shadow: 0 1px 3px rgba(0,0,0,.04);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      z-index: 20;
     }
-    .topbar-left { display: flex; align-items: center; gap: 14px; }
+    .header-left { display: flex; align-items: center; gap: 20px; }
     .collapse-btn {
-      width: 32px;
-      height: 32px;
-      border: 1.5px solid var(--border);
-      border-radius: 8px;
-      background: var(--surface-2);
+      background: transparent;
+      border: none;
+      color: #fff;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 16px;
-      color: var(--text-muted);
-      transition: all .2s;
+      padding: 6px;
+      border-radius: 4px;
+      transition: background 0.2s;
     }
-    .collapse-btn:hover { background: var(--border); color: var(--text); }
-    .collapse-icon {
-      font-family: 'Material Symbols Outlined';
-      font-size: 18px;
-      line-height: 1;
-    }
-    .page-title { font-size: 18px; font-weight: 700; }
-    .topbar-actions { display: flex; gap: 10px; align-items: center; }
+    .collapse-btn:hover { background: rgba(255,255,255,0.1); }
+    .collapse-icon { font-size: 24px; }
 
+    .header-brand { display: flex; align-items: center; gap: 12px; }
+    .header-logo { height: 40px; }
+    .header-title { font-size: 18px; font-weight: 600; }
+
+    .header-right { display: flex; align-items: center; gap: 16px; }
+
+    /* NOTIFICATIONS */
     .notif-wrap { position: relative; }
     .notif-bell {
       width: 36px;
       height: 36px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: var(--surface-2);
+      border-radius: 50%;
+      border: none;
+      background: rgba(255,255,255,0.1);
+      color: #fff;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       position: relative;
-      transition: all .18s;
+      transition: background 0.2s;
     }
-    .notif-bell:hover { background: var(--border); }
-    .bell-icon { font-size: 16px; line-height: 1; }
+    .notif-bell:hover { background: rgba(255,255,255,0.2); }
+    .bell-icon { font-size: 20px; }
     .notif-dot {
-      position: absolute;
-      top: 7px;
-      right: 7px;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #ef4444;
-      box-shadow: 0 0 0 2px var(--surface-2);
+      position: absolute; top: 4px; right: 4px; width: 8px; height: 8px;
+      border-radius: 50%; background: #ef4444; border: 2px solid #1d2d5e;
     }
-
     .notif-panel {
-      position: absolute;
-      top: calc(100% + 10px);
-      right: 0;
-      width: min(640px, calc(100vw - 40px));
-      z-index: 100;
-      opacity: 0;
-      transform: translateY(-8px) scale(.98);
-      pointer-events: none;
-      transition: opacity .2s ease, transform .2s ease;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 12px;
-      box-shadow: 0 10px 30px rgba(0,0,0,.14);
+      position: absolute; top: calc(100% + 10px); right: 0;
+      width: 320px; z-index: 100; opacity: 0; transform: translateY(-8px) scale(.98);
+      pointer-events: none; transition: all .2s;
+      background: #fff; color: #333; border: 1px solid #ddd;
+      border-radius: 8px; padding: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.14);
     }
-    .notif-panel.open {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-      pointer-events: auto;
+    .notif-panel.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+    .notif-empty { font-size: 13px; color: #888; padding: 16px; text-align: center; }
+
+    .notif-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); font-weight: 600; font-size: 14px; color: var(--text); }
+    .clear-btn { background: none; border: none; color: var(--primary); font-size: 12px; font-weight: 500; cursor: pointer; padding: 4px 8px; border-radius: 4px; }
+    .clear-btn:hover { background: var(--surface-hover); }
+
+    .notif-list { max-height: 350px; overflow-y: auto; padding-right: 4px; padding-top: 4px; display: flex; flex-direction: column; gap: 10px; }
+    .notif-list::-webkit-scrollbar { width: 4px; }
+    .notif-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .audit-log-item { display: flex; gap: 12px; padding: 12px 16px; border-radius: 10px; border: 1px solid #e2e8f0; border-left: 4px solid var(--primary); background: #f8fafc; transition: background 0.2s, transform 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.03); margin: 0; }
+    .audit-log-item:last-child { margin-bottom: 0; }
+    .audit-log-item:hover { background: #fff; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.06); }
+    .audit-log-icon { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: var(--surface-hover); color: var(--text-muted); }
+    .audit-log-icon.success { color: var(--success); background: rgba(34, 197, 94, 0.1); }
+    .audit-log-icon.failure { color: var(--danger); background: rgba(239, 68, 68, 0.1); }
+    .audit-log-content { display: flex; flex-direction: column; gap: 4px; }
+    .audit-log-title { font-size: 13px; color: var(--text); font-weight: 500; text-transform: capitalize; }
+    .audit-log-time { font-size: 11px; color: var(--text-muted); }
+    .notif-footer { display: block; padding: 10px; text-align: center; font-size: 13px; color: var(--primary); cursor: pointer; border-top: 1px solid var(--border); font-weight: 500; }
+    .notif-footer:hover { background: var(--surface-hover); text-decoration: underline; }
+
+    /* DATE AND TIME DISPLAY */
+    .datetime-display {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin-left: 16px;
+      margin-right: 8px;
+      color: #fff;
+      line-height: 1.2;
     }
-    .notif-empty {
-      font-size: 13px;
-      color: var(--text-muted);
-      padding: 8px 10px 10px;
+    .datetime-display .time {
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .datetime-display .date {
+      font-size: 11px;
+      opacity: 0.9;
     }
 
-    .content { flex: 1; overflow-y: auto; padding: 20px 28px 28px; background: var(--dark); }
+    /* USER PROFILE MENU */
+    .profile-wrap { position: relative; }
+    .user-menu-btn {
+      display: flex; align-items: center; gap: 10px; cursor: pointer;
+      padding: 6px 12px; border-radius: 20px; transition: background 0.2s;
+    }
+    .user-menu-btn:hover { background: rgba(255,255,255,0.1); }
+    .user-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: #d87625; color: #fff; font-weight: bold; font-size: 14px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .user-welcome { font-size: 14px; font-weight: 500; }
+    .dropdown-icon { font-size: 20px; }
+
+    .profile-dropdown {
+      position: absolute; top: calc(100% + 10px); right: 0; width: 200px;
+      background: #fff; color: #333; border: 1px solid #ddd; border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.1); z-index: 100;
+      opacity: 0; transform: translateY(-8px) scale(0.98); pointer-events: none; transition: all 0.2s;
+      display: flex; flex-direction: column; padding: 8px 0;
+    }
+    .profile-dropdown.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+    .dropdown-item {
+      padding: 10px 16px; font-size: 14px; display: flex; align-items: center; gap: 10px;
+      cursor: pointer; transition: background 0.2s; color: #333; text-decoration: none;
+    }
+    .dropdown-item:hover { background: #f3f4f6; color: #d87625; }
+    .dropdown-item.text-danger { color: #ef4444; }
+    .dropdown-item.text-danger:hover { background: #fef2f2; color: #dc2626; }
+    .dropdown-item .material-symbols-outlined { font-size: 18px; }
+    .dropdown-divider { height: 1px; background: #eee; margin: 4px 0; }
+
+    .header-logout-btn {
+      background: transparent; border: none; color: #ef4444; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; padding: 6px;
+      border-radius: 4px; transition: background 0.2s;
+    }
+    .header-logout-btn:hover { background: rgba(239,68,68,0.1); }
+
+    /* SIDEBAR */
+    .sidebar {
+      background: #1d2d5e;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden; overflow-y: auto;
+      transition: width .3s, min-width .3s;
+      position: relative;
+      z-index: 10;
+      box-shadow: 2px 0 8px rgba(0,0,0,0.05);
+    }
+    .sidebar.collapsed { width: 72px !important; min-width: 72px !important; }
+
+    .nav { flex: 1; padding: 16px 0; display: flex; flex-direction: column; gap: 4px; }
+    .nav-section {
+      padding: 16px 20px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: rgba(255,255,255,0.5);
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 20px;
+      color: #fff;
+      cursor: pointer;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: color .2s ease;
+      position: relative;
+    }
+    .sidebar.collapsed .nav-item { justify-content: center; padding-inline: 0; }
+
+    .nav-icon {
+      font-family: 'Material Symbols Outlined';
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .nav-item:hover, .nav-item.active {
+      color: #d87625;
+    }
+
+    .nav-label {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .nav-toggle-icon {
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform .2s;
+    }
+    .nav-toggle-icon::before {
+      content: 'expand_more';
+      font-family: 'Material Symbols Outlined';
+      font-size: 18px;
+    }
+    .nav-toggle-icon.expanded { transform: rotate(180deg); }
+
+    .nav-static-children, .nav-subgroup {
+      display: flex;
+      flex-direction: column;
+      background: rgba(0,0,0,0.1);
+      margin-bottom: 4px;
+    }
+    .nav-subitem { padding-left: 52px; font-size: 13px; }
+    .sidebar.collapsed .nav-subitem { padding-left: 0; justify-content: center; }
+
+    .sidebar-menu-loading { padding: 20px; color: rgba(255,255,255,0.6); font-size: 13px; text-align: center; }
+
+    .sidebar-resize-handle {
+      position: absolute;
+      top: 0; right: 0; bottom: 0; width: 5px;
+      cursor: col-resize; z-index: 20;
+    }
+    .sidebar-resize-handle:hover, .dashboard.resizing .sidebar-resize-handle {
+      background: rgba(255,255,255,0.1);
+    }
+
+    /* FOOTER */
+    .global-footer {
+      background: #dad8d8;
+      color: #000;
+      text-align: center;
+      padding: 12px 20px;
+      font-size: 13px;
+      font-weight: 500;
+      border-top: 1px solid #ddd;
+      flex-shrink: 0;
+    }
 
     @media (max-width: 768px) {
+      .header-title { display: none; }
+      .user-welcome { display: none; }
       .sidebar:not(.collapsed) {
+        position: absolute; height: 100%;
         width: min(300px, 82vw) !important;
         min-width: min(300px, 82vw) !important;
       }
       .sidebar-resize-handle { display: none; }
-      .topbar { padding-inline: 16px; }
-      .content { padding: 16px; }
     }
   `]
 })
@@ -576,9 +538,15 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
   @Input() roleLabel = '';
   @Output() sectionChange = new EventEmitter<string>();
   @ViewChild('notifWrap') notificationHost?: ElementRef<HTMLElement>;
+  @ViewChild('profileWrap') profileHost?: ElementRef<HTMLElement>;
+
 
   sidebarCollapsed = false;
-  hasPasswordAlert = false;
+  profileMenuOpen = false;
+
+  now = new Date();
+  private timeInterval: ReturnType<typeof setInterval> | null = null;
+
   notificationOpen = false;
   autoPreviewVisible = false;
   menuLoading = false;
@@ -587,10 +555,12 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
   private autoPreviewTimer: ReturnType<typeof setTimeout> | null = null;
   private routeEvents?: Subscription;
 
-  private auth = inject(AuthService);
+  auth = inject(AuthService);
+  notifService = inject(NotificationService);
   private menuService = inject(MenuService);
   private router = inject(Router);
   private toast = inject(ToastService);
+  apiService = inject(ApiService);
 
   readonly menu = this.menuService.menu;
 
@@ -620,40 +590,38 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
     if (this.notificationOpen) {
       this.autoPreviewVisible = false;
       this.clearAutoPreviewTimer();
+      this.notifService.markAllAsRead();
     }
   }
 
-  onPasswordBannerVisibilityChange(visible: boolean): void {
-    this.hasPasswordAlert = visible;
 
-    if (!visible) {
-      this.notificationOpen = false;
-      this.autoPreviewVisible = false;
-      this.clearAutoPreviewTimer();
-      return;
-    }
-
-    if (!this.notificationOpen) {
-      this.autoPreviewVisible = true;
-      this.clearAutoPreviewTimer();
-      this.autoPreviewTimer = setTimeout(() => {
-        this.autoPreviewVisible = false;
-      }, 3600);
-    }
-  }
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
-    const host = this.notificationHost?.nativeElement;
-    if (!host) return;
-    if (!host.contains(event.target as Node)) {
+    const notifHost = this.notificationHost?.nativeElement;
+    if (notifHost && !notifHost.contains(event.target as Node)) {
       this.notificationOpen = false;
+    }
+    const profileHost = this.profileHost?.nativeElement;
+    if (profileHost && !profileHost.contains(event.target as Node)) {
+      this.profileMenuOpen = false;
     }
   }
 
+  toggleProfileMenu(event: MouseEvent): void {
+    event.stopPropagation();
+    this.profileMenuOpen = !this.profileMenuOpen;
+  }
+
   ngOnInit(): void {
+    this.timeInterval = setInterval(() => {
+      this.now = new Date();
+    }, 1000);
     this.sidebarWidth = this.loadSidebarWidth();
     if (this.auth.isLoggedIn()) {
+      this.notifService.loadNotifications();
+      // Auto-preview logic can be added later if needed
+
       this.menuLoading = true;
       this.menuService.refreshMenu().subscribe({
         next: () => {
@@ -726,6 +694,7 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.timeInterval) clearInterval(this.timeInterval);
     this.clearAutoPreviewTimer();
     this.routeEvents?.unsubscribe();
   }

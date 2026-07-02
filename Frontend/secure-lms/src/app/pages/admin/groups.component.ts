@@ -49,7 +49,7 @@ import { ModalComponent } from '../../shared/modal/modal.component';
                 <!-- NEW DUAL LISTBOX IN FORM -->
                 <div class="form-group full-width" style="margin-top: 10px;">
                   <label>Assign Users</label>
-                  <div class="dual-listbox-wrap" style="display: flex; gap: 20px; align-items: stretch; justify-content: space-between; height: 250px;">
+                  <div class="dual-listbox-wrap" style="display: flex; gap: 20px; align-items: stretch; justify-content: space-between; height: 320px;">
                     <div class="listbox-container" style="flex: 1; border: 1px solid #ddd; border-radius: 6px; padding: 10px; display: flex; flex-direction: column;">
                       <h4 style="margin: 0 0 10px 0; font-size: 14px;">Available Users</h4>
                       <input type="text" class="form-control" style="margin-bottom: 10px;" placeholder="Search..." [(ngModel)]="searchAvailable" [ngModelOptions]="{standalone: true}" />
@@ -60,11 +60,19 @@ import { ModalComponent } from '../../shared/modal/modal.component';
                           <option [value]="g">{{ g }}</option>
                         }
                       </select>
-                      <select multiple class="form-control" style="flex: 1; min-height: 150px;" [(ngModel)]="selectedAvailable" [ngModelOptions]="{standalone: true}">
+                      <div class="custom-listbox form-control" style="flex: 1; min-height: 150px; overflow-y: auto; padding: 0;">
                         @for (u of filteredAvailableUsers(); track u.id) {
-                          <option [ngValue]="u">{{ u.firstName }} {{ u.lastName }} ({{ u.username }}) [{{ u.groupName || 'Pending / None' }}]</option>
+                          <div class="listbox-item" 
+                               [class.selected]="selectedAvailable.includes(u)" 
+                               (click)="toggleSelection(u, 'available', $event)"
+                               style="padding: 6px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; user-select: none;">
+                            {{ u.firstName }} {{ u.lastName }} ({{ u.username }}) [{{ u.groupName || 'Pending / None' }}]
+                          </div>
                         }
-                      </select>
+                        @if (filteredAvailableUsers().length === 0) {
+                          <div style="padding: 10px; color: #888; text-align: center; font-style: italic;">No users available</div>
+                        }
+                      </div>
                     </div>
                     
                     <div class="listbox-actions" style="display: flex; flex-direction: column; justify-content: center; gap: 10px;">
@@ -75,11 +83,19 @@ import { ModalComponent } from '../../shared/modal/modal.component';
                     <div class="listbox-container" style="flex: 1; border: 1px solid #ddd; border-radius: 6px; padding: 10px; display: flex; flex-direction: column;">
                       <h4 style="margin: 0 0 10px 0; font-size: 14px;">Assigned Users</h4>
                       <input type="text" class="form-control" style="margin-bottom: 10px;" placeholder="Search..." [(ngModel)]="searchAssigned" [ngModelOptions]="{standalone: true}" />
-                      <select multiple class="form-control" style="flex: 1; min-height: 150px;" [(ngModel)]="selectedAssigned" [ngModelOptions]="{standalone: true}">
+                      <div class="custom-listbox form-control" style="flex: 1; min-height: 150px; overflow-y: auto; padding: 0;">
                         @for (u of filteredAssignedUsers(); track u.id) {
-                          <option [ngValue]="u">{{ u.firstName }} {{ u.lastName }} ({{ u.username }})</option>
+                          <div class="listbox-item" 
+                               [class.selected]="selectedAssigned.includes(u)" 
+                               (click)="toggleSelection(u, 'assigned', $event)"
+                               style="padding: 6px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; user-select: none;">
+                            {{ u.firstName }} {{ u.lastName }} ({{ u.username }})
+                          </div>
                         }
-                      </select>
+                        @if (filteredAssignedUsers().length === 0) {
+                          <div style="padding: 10px; color: #888; text-align: center; font-style: italic;">No users assigned</div>
+                        }
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -180,7 +196,11 @@ import { ModalComponent } from '../../shared/modal/modal.component';
 
       </mat-tab-group>
     </app-dashboard-layout>
-  `
+  `,
+  styles: [`
+    .listbox-item:hover { background: #f9f9f9; }
+    .listbox-item.selected { background: #1d2d5e !important; color: white !important; }
+  `]
 })
 export class GroupsComponent implements OnInit {
   private router = inject(Router);
@@ -438,5 +458,24 @@ export class GroupsComponent implements OnInit {
     this.availableUsers = [...this.availableUsers, ...this.selectedAssigned];
     this.assignedUsers = this.assignedUsers.filter(u => !this.selectedAssigned.includes(u));
     this.selectedAssigned = [];
+  }
+
+  toggleSelection(user: User, list: 'available' | 'assigned', event: MouseEvent) {
+    const selectedList = list === 'available' ? this.selectedAvailable : this.selectedAssigned;
+    const index = selectedList.findIndex(u => u.id === user.id);
+
+    if (event.ctrlKey || event.metaKey || event.shiftKey) {
+      if (index > -1) {
+        selectedList.splice(index, 1);
+      } else {
+        selectedList.push(user);
+      }
+    } else {
+      if (list === 'available') {
+        this.selectedAvailable = [user];
+      } else {
+        this.selectedAssigned = [user];
+      }
+    }
   }
 }

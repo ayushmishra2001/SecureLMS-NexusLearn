@@ -59,13 +59,27 @@ export interface AuditLogEntry {
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
+  // Bulk upload locations
+  uploadLocations(file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post(this.base + '/locations/upload', formData);
+  }
     private base = '/api';
 
     constructor(private http: HttpClient) { }
 
     // ── Auth ──────────────────────────────────────────────────────────────────
-    login(email: string, password: string): Observable<ApiResponse<any>> {
-        return this.http.post<ApiResponse<any>>(`${this.base}/auth/login`, { email, password });
+    login(identifier: string, password: string): Observable<ApiResponse<any>> {
+        return this.http.post<ApiResponse<any>>(`${this.base}/auth/login`, { identifier, password });
+    }
+
+    requestOtp(identifier: string): Observable<ApiResponse<any>> {
+        return this.http.post<ApiResponse<any>>(`${this.base}/auth/otp-request`, { identifier });
+    }
+
+    verifyOtp(preAuthToken: string, otp: string): Observable<ApiResponse<any>> {
+        return this.http.post<ApiResponse<any>>(`${this.base}/auth/verify-otp`, { preAuthToken, otp });
     }
 
     register(payload: any): Observable<ApiResponse<void>> {
@@ -533,3 +547,6 @@ export class ApiService {
         return this.http.get(`${this.base}/export/my-enrollments/pdf`, { responseType: 'blob' });
     }
 }
+
+
+

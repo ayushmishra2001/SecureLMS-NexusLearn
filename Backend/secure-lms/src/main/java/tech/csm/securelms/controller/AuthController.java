@@ -18,6 +18,7 @@ import tech.csm.securelms.dto.request.PasswordResetConfirmRequest;
 import tech.csm.securelms.dto.request.PasswordResetRequest;
 import tech.csm.securelms.dto.request.RegisterRequest;
 import tech.csm.securelms.dto.request.UpdateProfileRequest;
+import tech.csm.securelms.dto.request.VerifyOtpRequest;
 import tech.csm.securelms.dto.response.ApiResponse;
 import tech.csm.securelms.dto.response.AuthResponse;
 import tech.csm.securelms.dto.response.PasswordExpiryStatusResponse;
@@ -81,8 +82,9 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<Void>> register(
-            @Valid @RequestBody RegisterRequest request) {
-        authService.register(request);
+            @Valid @RequestBody RegisterRequest request,
+            HttpServletRequest httpRequest) {
+        authService.register(request, httpRequest);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Registration successful! Please log in."));
     }
@@ -92,6 +94,26 @@ public class AuthController {
             HttpServletRequest httpRequest,
             @Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request, httpRequest);
+        return ResponseEntity.ok(ApiResponse.success("Login successful", response));
+    }
+
+    @PostMapping("/otp-request")
+    public ResponseEntity<ApiResponse<AuthResponse>> requestOtp(
+            HttpServletRequest httpRequest,
+            @RequestBody java.util.Map<String, String> request) {
+        String identifier = request.get("identifier");
+        if (identifier == null || identifier.isBlank()) {
+            throw new org.springframework.security.authentication.BadCredentialsException("Identifier is required");
+        }
+        AuthResponse response = authService.requestOtp(identifier, httpRequest);
+        return ResponseEntity.ok(ApiResponse.success("OTP sent successfully", response));
+    }
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<ApiResponse<AuthResponse>> verifyOtp(
+            HttpServletRequest httpRequest,
+            @Valid @RequestBody VerifyOtpRequest request) {
+        AuthResponse response = authService.verifyOtp(request.getPreAuthToken(), request.getOtp(), httpRequest);
         return ResponseEntity.ok(ApiResponse.success("Login successful", response));
     }
 
@@ -107,6 +129,7 @@ public class AuthController {
 
         try {
             if (request.getSession(false) != null) {
+                request.getSession().removeAttribute(org.springframework.security.web.context.HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY);
                 request.getSession().invalidate();
             }
         } catch (IllegalStateException ex) {

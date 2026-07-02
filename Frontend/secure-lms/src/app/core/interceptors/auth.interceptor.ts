@@ -1,7 +1,7 @@
-﻿import { isPlatformBrowser } from '@angular/common';
+import { isPlatformBrowser } from '@angular/common';
 import { HttpInterceptorFn, HttpRequest, HttpHandlerFn, HttpEvent } from '@angular/common/http';
 import { inject, PLATFORM_ID } from '@angular/core';
-import { Observable, catchError, from, switchMap, throwError } from 'rxjs';
+import { Observable, catchError, from, switchMap, throwError, EMPTY } from 'rxjs';
 import { Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
@@ -64,7 +64,8 @@ export const authInterceptor: HttpInterceptorFn = (
     const handleAuthErrors = (err: any): Observable<never> => {
         if (err.status === 401 && !skip401Redirect) {
             authService.clearUser();
-            router.navigate(['/login']);
+            router.navigate(['/login'], { queryParams: { sessionExpired: 'true' } });
+            return EMPTY as Observable<never>;
         }
         return throwError(() => err);
     };

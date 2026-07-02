@@ -21,58 +21,55 @@ function matchPasswords(c: AbstractControl): ValidationErrors | null {
     standalone: true,
     imports: [CommonModule, RouterModule, ReactiveFormsModule, AuthCardComponent],
     template: `
-    <app-auth-card title="Set a new password" [subtitle]="subtitle">
-      @if (error)   { <div class="alert alert-error"><span class="mi">warning</span>{{ error }}</div> }
-      @if (success) { <div class="alert alert-success"><span class="mi">check_circle</span>{{ success }}</div> }
+    <app-auth-card>
+      @if (error)   { <div class="alert alert-error" style="margin-bottom: 15px;"><span class="mi">warning</span>{{ error }}</div> }
+      @if (success) { <div class="alert alert-success" style="margin-bottom: 15px;"><span class="mi">check_circle</span>{{ success }}</div> }
 
       @if (tokenValid) {
         <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-          <div class="form-group">
-            <label>New password</label>
-            <div class="password-wrap">
-              <input [type]="showPw ? 'text' : 'password'" class="form-control"
-                     formControlName="newPassword"
-                     placeholder="Min 8 chars, mixed case + symbol"
-                     autocomplete="new-password"
-                     (input)="updateStrength()" />
-              <button type="button" class="toggle-pw" (click)="showPw = !showPw">
-                {{ showPw ? 'Hide' : 'Show' }}
-              </button>
+          <div class="auth-split-input-group">
+            <input [type]="showPw ? 'text' : 'password'" class="form-control"
+                   formControlName="newPassword"
+                   placeholder="New Password"
+                   autocomplete="new-password"
+                   (input)="updateStrength()" />
+            <button type="button" class="toggle-pw" (click)="showPw = !showPw" title="Toggle password visibility">
+              <span class="material-symbols-outlined">{{ showPw ? 'visibility' : 'visibility_off' }}</span>
+            </button>
+            <div class="strength-bar" style="margin-top: 4px; height: 4px; background: #eee; border-radius: 2px; overflow: hidden;">
+              <div class="strength-fill" [style.width]="strengthW" [style.background]="strengthC" style="height: 100%; transition: width 0.3s, background 0.3s;"></div>
             </div>
-            <div class="strength-bar"><div class="strength-fill" [style.width]="strengthW" [style.background]="strengthC"></div></div>
-            @if (strengthLabel) { <div class="strength-text" [style.color]="strengthC">{{ strengthLabel }}</div> }
+            @if (strengthLabel) { <div class="strength-text" [style.color]="strengthC" style="font-size: 11px; margin-top: 4px;">{{ strengthLabel }}</div> }
             @if (f['newPassword'].touched && f['newPassword'].errors?.['required']) {
-              <div class="field-error">Password is required</div>
+              <div class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">Password is required</div>
             }
             @if (f['newPassword'].touched && f['newPassword'].errors?.['passwordStrength']) {
-              <div class="field-error">Need uppercase, lowercase, digit & special character</div>
+              <div class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">Need uppercase, lowercase, digit & special character</div>
             }
           </div>
 
-          <div class="form-group">
-            <label>Confirm new password</label>
-            <div class="password-wrap">
-              <input [type]="showCp ? 'text' : 'password'" class="form-control"
-                     formControlName="confirmNewPassword"
-                     placeholder="Re-enter your password"
-                     autocomplete="new-password" />
-              <button type="button" class="toggle-pw" (click)="showCp = !showCp">
-                {{ showCp ? 'Hide' : 'Show' }}
-              </button>
-            </div>
+          <div class="auth-split-input-group">
+            <input [type]="showCp ? 'text' : 'password'" class="form-control"
+                   formControlName="confirmNewPassword"
+                   placeholder="Confirm new password"
+                   autocomplete="new-password" />
+            <button type="button" class="toggle-pw" (click)="showCp = !showCp" title="Toggle password visibility">
+              <span class="material-symbols-outlined">{{ showCp ? 'visibility' : 'visibility_off' }}</span>
+            </button>
             @if (f['confirmNewPassword'].touched && form.errors?.['mismatch']) {
-              <div class="field-error">Passwords do not match</div>
+              <div class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">Passwords do not match</div>
             }
           </div>
 
-          <button type="submit" class="btn btn-primary btn-full" [disabled]="loading" style="margin-top:8px">
-            @if (loading) { <span class="spinner"></span> } @else { Reset password }
+          <button type="submit" class="auth-split-btn" [disabled]="loading" style="margin-top:8px">
+            @if (loading) { <span class="spinner"></span> } @else { RESET PASSWORD }
           </button>
         </form>
       }
 
-      <div class="divider"><span></span></div>
-      <a routerLink="/login" style="display:block; text-align:center; font-size:14px">← Back to Sign in</a>
+      <div class="auth-forgot-link">
+        <a routerLink="/login">Back to Sign in</a>
+      </div>
     </app-auth-card>
   `
 })

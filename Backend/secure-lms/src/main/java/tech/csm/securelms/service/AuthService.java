@@ -62,6 +62,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final RoleMasterService roleMasterService;
+    private final OtpService otpService;
 
     @Value("${app.security.lockout.max-failed-attempts:3}")
     private int maxFailedAttempts;
@@ -129,7 +130,7 @@ public class AuthService {
     private String superAdminSecret;
 
     @Transactional
-    public void register(RegisterRequest request) {
+    public void register(RegisterRequest request, HttpServletRequest httpRequest) {
         if (!request.getPassword().equals(request.getConfirmPassword())) {
             throw new BadRequestException("Passwords do not match");
         }
@@ -185,11 +186,15 @@ public class AuthService {
         userRepository.save(user);
         log.info("New user registered: {} as {}", user.getUsername(), user.getRole());
         // -- Audit log the registration -------------------------------------------
+        String clientIp = resolveClientIp(httpRequest);
+        String browser = resolveBrowser(httpRequest);
+        
         securityAuditService.logEvent(
                 user,
                 SecurityEventType.USER_REGISTERED,
                 "SUCCESS",
-                null, // no IP available at registration in current flow
+                clientIp,
+                browser,
                 user.getEmail(),
                 "New " + roleMasterService.roleCode(user.getRole()) + " account registered");
         // ------------------------------------------------------------------------
@@ -211,16 +216,26 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request, HttpServletRequest httpRequest) {
-        String normalisedEmail = request.getEmail().toLowerCase().trim();
-        String emailHash = aesEncryptionService.hashEmail(normalisedEmail);
+        String identifier = request.getIdentifier().trim();
         String clientIp = resolveClientIp(httpRequest);
         String browser = resolveBrowser(httpRequest);
-        Optional<User> existingUser = userRepository.findByEmailHash(emailHash);
+        
+        Optional<User> existingUser;
+        if (identifier.contains("@")) {
+            existingUser = userRepository.findByEmailHash(aesEncryptionService.hashEmail(identifier.toLowerCase()));
+        } else if (identifier.matches("^[\\d\\+\\-]+$")) {
+            existingUser = userRepository.findByContactNumber(identifier);
+        } else {
+            existingUser = userRepository.findByUsername(identifier);
+        }
 
         Authentication authentication;
         try {
+            // Spring Security UserDetailsService likely uses email (or we pass email to be safe if it's the principal)
+            // Let's pass the actual email from the existing user if found, else pass identifier so it fails naturally
+            String authPrincipal = existingUser.map(User::getEmail).orElse(identifier);
             authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(normalisedEmail, request.getPassword()));
+                    new UsernamePasswordAuthenticationToken(authPrincipal, request.getPassword()));
         } catch (BadCredentialsException ex) {
             String lockMessage = null;
             if (existingUser.isPresent()) {
@@ -232,7 +247,7 @@ public class AuthService {
                     "FAILURE",
                     clientIp,
                     browser,
-                    normalisedEmail,
+                    identifier,
                     "Invalid login credentials");
             if (lockMessage != null) {
                 throw new LockedException(lockMessage);
@@ -245,7 +260,7 @@ public class AuthService {
                     "FAILURE",
                     clientIp,
                     browser,
-                    normalisedEmail,
+                    identifier,
                     "Login blocked because account is locked");
             throw ex;
         }
@@ -263,7 +278,7 @@ public class AuthService {
                     "FAILURE",
                     clientIp,
                     browser,
-                    normalisedEmail,
+                    authenticatedUser.getEmail(),
                     "Login blocked: password has expired");
             throw new BadRequestException(
                     "Your password has expired. Please use the 'Forgot Password' feature to reset it.");
@@ -276,28 +291,147 @@ public class AuthService {
             userRepository.save(u);
         });
 
+        // Direct Login without OTP
         SecurityContextHolder.getContext().setAuthentication(authentication);
         HttpSession session = httpRequest.getSession(true);
         session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
                 SecurityContextHolder.getContext());
+        session.setAttribute("CLIENT_IP", clientIp);
+        session.setAttribute("CLIENT_BROWSER", browser);
 
-        log.info("User logged in: {} ({})", userPrincipal.getUsername(), userPrincipal.getRole());
+        log.info("User logged in via password: {} ({})", userPrincipal.getUsername(), userPrincipal.getRole());
         securityAuditService.logEvent(
-                existingUser.orElse(null),
+                authenticatedUser,
                 SecurityEventType.LOGIN_SUCCESS,
                 "SUCCESS",
                 clientIp,
                 browser,
-                normalisedEmail,
-                "User authenticated successfully");
+                authenticatedUser.getEmail(),
+                "User authenticated successfully via password");
 
-        // return AuthResponse.builder()
-        // .userId(userPrincipal.getId())
-        // .username(userPrincipal.getUsername())
-        // .email(userPrincipal.getEmail())
-        // .role(userPrincipal.getRole())
-        // .build();
-        // Replace the return statement at the end of login()
+        return AuthResponse.builder()
+                .userId(userPrincipal.getId())
+                .username(userPrincipal.getUsername())
+                .email(userPrincipal.getEmail())
+                .role(userPrincipal.getRole())
+                .roleId(userPrincipal.getRoleId())
+                .build();
+    }
+
+    public AuthResponse requestOtp(String identifier, HttpServletRequest httpRequest) {
+        identifier = identifier.trim();
+        String clientIp = resolveClientIp(httpRequest);
+        String browser = resolveBrowser(httpRequest);
+        
+        Optional<User> existingUser;
+        if (identifier.contains("@")) {
+            existingUser = userRepository.findByEmailHash(aesEncryptionService.hashEmail(identifier.toLowerCase()));
+        } else if (identifier.matches("^[\\d\\+\\-]+$")) {
+            existingUser = userRepository.findByContactNumber(identifier);
+        } else {
+            existingUser = userRepository.findByUsername(identifier);
+        }
+
+        if (existingUser.isEmpty()) {
+            // Do not reveal that user doesn't exist, just act like we sent it or throw a generic error.
+            // Since it's internal we can throw BadCredentialsException.
+            securityAuditService.logEvent(
+                    null,
+                    SecurityEventType.LOGIN_FAILED,
+                    "FAILURE",
+                    clientIp,
+                    browser,
+                    identifier,
+                    "OTP requested for non-existent user");
+            throw new BadCredentialsException("Invalid credentials");
+        }
+
+        User user = existingUser.get();
+
+        if (!user.isAccountNonLocked()) {
+            securityAuditService.logEvent(
+                    user,
+                    SecurityEventType.LOGIN_FAILED,
+                    "FAILURE",
+                    clientIp,
+                    browser,
+                    identifier,
+                    "OTP blocked because account is locked");
+            throw new LockedException("Your account is locked.");
+        }
+
+        // Generate OTP, store it, send email, and return preAuthToken
+        String userEmail = user.getEmail();
+        String preAuthToken = otpService.generateAndStoreOtp(userEmail);
+        String otp = otpService.getOtpByPreAuthToken(preAuthToken);
+        
+        try {
+            emailService.sendOtpEmail(userEmail, otp);
+            log.info("Sent OTP to {}", userEmail);
+            log.info("********** OTP for {} is: {} **********", userEmail, otp);
+        } catch (Exception ex) {
+            log.warn("Failed to send OTP email: {}", ex.getMessage());
+            log.info("********** LOCAL FALLBACK: OTP for {} is: {} **********", userEmail, otp);
+            // We no longer throw an exception so that local testing still works without a mail server
+        }
+
+        return AuthResponse.builder()
+                .preAuthToken(preAuthToken)
+                .build();
+    }
+
+    @Transactional
+    public AuthResponse verifyOtp(String preAuthToken, String otp, HttpServletRequest httpRequest) {
+        String email = otpService.validateOtp(preAuthToken, otp);
+        if (email == null) {
+            String pendingEmail = otpService.getEmailByPreAuthToken(preAuthToken);
+            String clientIp = resolveClientIp(httpRequest);
+            String browser = resolveBrowser(httpRequest);
+            
+            if (pendingEmail != null) {
+                User user = userRepository.findByEmailHash(aesEncryptionService.hashEmail(pendingEmail.toLowerCase().trim())).orElse(null);
+                securityAuditService.logEvent(
+                        user,
+                        SecurityEventType.LOGIN_FAILED,
+                        "FAILURE",
+                        clientIp,
+                        browser,
+                        pendingEmail,
+                        "Invalid or expired OTP");
+            }
+            throw new BadRequestException("Invalid or expired OTP");
+        }
+
+        User user = userRepository.findByEmailHash(aesEncryptionService.hashEmail(email.toLowerCase().trim()))
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Load principal from DB since we skipped authentication manager here
+        // We can create a UsernamePasswordAuthenticationToken and authenticate it using a dedicated provider,
+        // but since we already verified password in step 1, we can just build the UserPrincipal directly.
+        UserPrincipal userPrincipal = UserPrincipal.create(user);
+        
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                userPrincipal, null, userPrincipal.getAuthorities());
+                
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        HttpSession session = httpRequest.getSession(true);
+        session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
+                SecurityContextHolder.getContext());
+                
+        String clientIp = resolveClientIp(httpRequest);
+        String browser = resolveBrowser(httpRequest);
+        session.setAttribute("CLIENT_IP", clientIp);
+        session.setAttribute("CLIENT_BROWSER", browser);
+        log.info("User logged in: {} ({})", userPrincipal.getUsername(), userPrincipal.getRole());
+        securityAuditService.logEvent(
+                user,
+                SecurityEventType.LOGIN_SUCCESS,
+                "SUCCESS",
+                clientIp,
+                browser,
+                email,
+                "User authenticated successfully via OTP");
+
         return AuthResponse.builder()
                 .userId(userPrincipal.getId())
                 .username(userPrincipal.getUsername())

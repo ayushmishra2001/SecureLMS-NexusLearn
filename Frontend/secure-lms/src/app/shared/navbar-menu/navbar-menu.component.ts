@@ -30,13 +30,13 @@ import { resolveRoleRoutePath } from '../../core/navigation/app-routes';
                     <div class="navbar-function">
                       <button class="navbar-function-button" (click)="toggleFunction(fun.functionLink.id)">
                         <span>{{ fun.functionLink.displayName }}</span>
-                        <span class="permission-pill" [class.disabled]="!fun.permissions?.canView">View</span>
+                        <span class="permission-pill" [class.disabled]="!fun.permissions.canView">View</span>
                         <span class="navbar-group-icon">{{ isFunctionExpanded(fun.functionLink.id) ? 'expand_less' : 'expand_more' }}</span>
                       </button>
                       @if (isFunctionExpanded(fun.functionLink.id)) {
                         <div class="navbar-primaries">
                           @for (item of fun.primaryLinks; track item.id) {
-                            <a class="navbar-primary" [routerLink]="resolvedRoutePath(item.routePath)" (click)="selectRoute(item.routePath)">
+                            <a class="navbar-primary" [routerLink]="resolvedRoutePath(item.routePath ?? '')" (click)="selectRoute(item.routePath ?? '')">
                               {{ item.displayName }}
                             </a>
                           }

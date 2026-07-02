@@ -32,8 +32,7 @@ function matchPasswords(c: AbstractControl): ValidationErrors | null {
 
       <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
 
-        <div class="form-group">
-          <label>I am registering as</label>
+        <div class="auth-split-input-group">
           <select class="form-control" formControlName="role">
             <option value="">— Select your role —</option>
             @for (role of roles; track role.code) {
@@ -41,149 +40,166 @@ function matchPasswords(c: AbstractControl): ValidationErrors | null {
             }
           </select>
           @if (rolesLoading) {
-            <div class="field-hint">Loading roles...</div>
+            <div class="field-hint" style="font-size: 12px; margin-top: 4px;">Loading roles...</div>
           }
           @if (!rolesLoading && !roles.length) {
-            <div class="field-error">No registration roles are available</div>
+            <div class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">No registration roles are available</div>
           }
           @if (f['role'].touched && f['role'].errors?.['required']) {
-            <div class="field-error">Please select a role</div>
+            <div class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">Please select a role</div>
           }
         </div>
 
         @if (f['role'].value === 'SUPER_ADMIN') {
-          <div class="form-group">
-            <label>Super Admin Secret</label>
-            <input type="password" class="form-control" formControlName="superAdminSecret" placeholder="Required for Super Admin registration" />
+          <div class="auth-split-input-group">
+            <div class="input-wrapper">
+              <input type="password" class="form-control" formControlName="superAdminSecret" placeholder="Super Admin Secret" />
+              <span class="material-symbols-outlined input-icon">key</span>
+            </div>
           </div>
         }
 
         <div class="two-col">
-          <div class="form-group">
-            <label>First Name</label>
-            <input type="text" class="form-control" formControlName="firstName" placeholder="John" />
+          <div class="auth-split-input-group">
+            <div class="input-wrapper">
+              <input type="text" class="form-control" formControlName="firstName" placeholder="First Name" />
+              <span class="material-symbols-outlined input-icon">badge</span>
+            </div>
             @if (f['firstName'].touched && f['firstName'].errors?.['required']) {
-              <div class="field-error">Required</div>
+              <div class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">Required</div>
             }
             @if (f['firstName'].touched && f['firstName'].errors?.['maxlength']) {
-              <div class="field-error">Must be at most 50 characters</div>
+              <div class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">Must be at most 50 characters</div>
             }
           </div>
-          <div class="form-group">
-            <label>Last Name</label>
-            <input type="text" class="form-control" formControlName="lastName" placeholder="Doe" />
+          <div class="auth-split-input-group">
+            <div class="input-wrapper">
+              <input type="text" class="form-control" formControlName="lastName" placeholder="Last Name" />
+              <span class="material-symbols-outlined input-icon">badge</span>
+            </div>
             @if (f['lastName'].touched && f['lastName'].errors?.['required']) {
-              <div class="field-error">Required</div>
+              <div class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">Required</div>
             }
             @if (f['lastName'].touched && f['lastName'].errors?.['maxlength']) {
-              <div class="field-error">Must be at most 50 characters</div>
+              <div class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">Must be at most 50 characters</div>
             }
           </div>
         </div>
 
         <div class="two-col">
-          <div class="form-group">
-            <label>Contact Number</label>
-            <input type="tel" class="form-control" formControlName="contactNumber"
-                   placeholder="10-digit mobile number" maxlength="10" inputmode="numeric" />
+          <div class="auth-split-input-group">
+            <div class="input-wrapper">
+              <input type="tel" class="form-control" formControlName="contactNumber"
+                     placeholder="10-digit mobile number" maxlength="10" inputmode="numeric" />
+              <span class="material-symbols-outlined input-icon">phone_iphone</span>
+            </div>
             @if (f['contactNumber'].touched && f['contactNumber'].errors?.['required']) {
-              <div class="field-error">Contact number is required</div>
+              <div class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">Contact number is required</div>
             }
             @if (f['contactNumber'].touched && f['contactNumber'].errors?.['pattern']) {
-              <div class="field-error">Enter a valid 10-digit number starting with 6-9</div>
+              <div class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">Enter a valid 10-digit number starting with 6-9</div>
             }
           </div>
-          <div class="form-group">
-            <label>Aadhar Number</label>
-            <input type="tel" class="form-control" formControlName="aadharNumber"
-                   placeholder="12-digit Aadhar number" maxlength="12" inputmode="numeric" />
+          <div class="auth-split-input-group">
+            <div class="input-wrapper">
+              <input type="tel" class="form-control" formControlName="aadharNumber"
+                     placeholder="12-digit Aadhar number" maxlength="12" inputmode="numeric" />
+              <span class="material-symbols-outlined input-icon">fingerprint</span>
+            </div>
             @if (f['aadharNumber'].touched && f['aadharNumber'].errors?.['required']) {
-              <div class="field-error">Aadhar number is required</div>
+              <div class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">Aadhar number is required</div>
             }
             @if (f['aadharNumber'].touched && f['aadharNumber'].errors?.['pattern']) {
-              <div class="field-error">Aadhar number must be exactly 12 digits</div>
+              <div class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">Aadhar number must be exactly 12 digits</div>
             }
           </div>
         </div>
 
-        <div class="form-group">
-          <label>Username</label>
-          <input type="text" class="form-control" formControlName="username"
-                 placeholder="e.g. john_doe" autocomplete="username" />
+        <div class="auth-split-input-group">
+          <div class="input-wrapper">
+            <input type="text" class="form-control" formControlName="username"
+                   placeholder="Username" autocomplete="username" />
+            <span class="material-symbols-outlined input-icon">account_circle</span>
+          </div>
           @if (f['username'].touched && f['username'].errors?.['required']) {
-            <div class="field-error">Username is required</div>
+            <div class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">Username is required</div>
           }
           @if (f['username'].touched && f['username'].errors?.['minlength']) {
-            <div class="field-error">At least 3 characters</div>
+            <div class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">At least 3 characters</div>
           }
           @if (f['username'].touched && f['username'].errors?.['pattern']) {
-            <div class="field-error">Only letters, digits, and underscores</div>
+            <div class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">Only letters, digits, and underscores</div>
           }
         </div>
 
-        <div class="form-group">
-          <label>Email address</label>
-          <input type="email" class="form-control" formControlName="email"
-                 placeholder="you@example.com" autocomplete="email" />
+        <div class="auth-split-input-group">
+          <div class="input-wrapper">
+            <input type="email" class="form-control" formControlName="email"
+                   placeholder="Email address" autocomplete="email" />
+            <span class="material-symbols-outlined input-icon">mail</span>
+          </div>
           @if (f['email'].touched && f['email'].errors?.['required']) {
-            <div class="field-error">Email is required</div>
+            <div class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">Email is required</div>
           }
           @if (f['email'].touched && f['email'].errors?.['email']) {
-            <div class="field-error">Enter a valid email</div>
+            <div class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">Enter a valid email</div>
           }
         </div>
 
-        <div class="form-group">
-          <label>Password</label>
-          <div class="password-wrap">
+        <div class="auth-split-input-group">
+          <div class="input-wrapper">
             <input [type]="showPw ? 'text' : 'password'" class="form-control"
                    formControlName="password"
-                   placeholder="Min 8 chars, mixed case + symbol"
+                   placeholder="Password (Min 8 chars, mixed case + symbol)"
                    autocomplete="new-password"
                    (input)="updateStrength()" />
-            <button type="button" class="toggle-pw" (click)="showPw = !showPw">
-              {{ showPw ? 'Hide' : 'Show' }}
+            <button type="button" class="toggle-pw" (click)="showPw = !showPw" title="Toggle password visibility">
+              <span class="material-symbols-outlined">{{ showPw ? 'visibility' : 'visibility_off' }}</span>
             </button>
           </div>
-          <div class="strength-bar"><div class="strength-fill" [style.width]="strengthW" [style.background]="strengthC"></div></div>
-          @if (strengthLabel) { <div class="strength-text" [style.color]="strengthC">{{ strengthLabel }}</div> }
+          
+          <div class="strength-bar" style="margin-top: 4px; height: 4px; background: #eee; border-radius: 2px; overflow: hidden;">
+            <div class="strength-fill" [style.width]="strengthW" [style.background]="strengthC" style="height: 100%; transition: width 0.3s, background 0.3s;"></div>
+          </div>
+          @if (strengthLabel) { <div class="strength-text" [style.color]="strengthC" style="font-size: 11px; margin-top: 4px;">{{ strengthLabel }}</div> }
+          
           @if (f['password'].touched && f['password'].errors?.['required']) {
-            <div class="field-error">Password is required</div>
+            <div class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">Password is required</div>
           }
           @if (f['password'].touched && f['password'].errors?.['minlength']) {
-            <div class="field-error">At least 8 characters</div>
+            <div class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">At least 8 characters</div>
           }
           @if (f['password'].touched && f['password'].errors?.['passwordStrength']) {
-            <div class="field-error">Need uppercase, lowercase, digit & special character</div>
+            <div class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">Need uppercase, lowercase, digit & special character</div>
           }
         </div>
 
-        <div class="form-group">
-          <label>Confirm password</label>
-          <div class="password-wrap">
+        <div class="auth-split-input-group">
+          <div class="input-wrapper">
             <input [type]="showCp ? 'text' : 'password'" class="form-control"
                    formControlName="confirmPassword"
-                   placeholder="Re-enter your password"
+                   placeholder="Confirm Password"
                    autocomplete="new-password" />
-            <button type="button" class="toggle-pw" (click)="showCp = !showCp">
-              {{ showCp ? 'Hide' : 'Show' }}
+            <button type="button" class="toggle-pw" (click)="showCp = !showCp" title="Toggle password visibility">
+              <span class="material-symbols-outlined">{{ showCp ? 'visibility' : 'visibility_off' }}</span>
             </button>
           </div>
           @if (f['confirmPassword'].touched && form.errors?.['mismatch']) {
-            <div class="field-error">Passwords do not match</div>
+            <div class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">Passwords do not match</div>
           }
           @if (f['confirmPassword'].touched && f['confirmPassword'].errors?.['required']) {
-            <div class="field-error">Please confirm your password</div>
+            <div class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">Please confirm your password</div>
           }
         </div>
 
-        <button type="submit" class="btn btn-primary btn-full" [disabled]="loading" style="margin-top:8px">
-          @if (loading) { <span class="spinner"></span> } @else { Create account }
+        <button type="submit" class="auth-split-btn" [disabled]="loading" style="margin-top: 8px">
+          @if (loading) { <span class="spinner"></span> } @else { REGISTER }
         </button>
+        
+        <div class="auth-forgot-link">
+          <a routerLink="/login">Already have an account? Sign in</a>
+        </div>
       </form>
-
-      <div class="divider"><span>Already have an account?</span></div>
-      <a routerLink="/login" style="display:block; text-align:center; font-size:14px">Sign in →</a>
     </app-auth-card>
   `,
     styles: [`.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }`]

@@ -84,6 +84,17 @@ public class EmailService {
         sendEmail(toEmail, subject, text, "registration welcome");
     }
 
+    public void sendOtpEmail(String toEmail, String otp) {
+        String subject = "SecureLMS - Your One-Time Password (OTP)";
+        String text = "Hello,\n\n" +
+                "Your OTP for SecureLMS authentication is: " + otp + "\n\n" +
+                "This OTP will expire in 5 minutes.\n\n" +
+                "If you did not attempt to log in, please secure your account immediately.\n\n" +
+                "The SecureLMS Team";
+
+        sendEmail(toEmail, subject, text, "login OTP");
+    }
+
     private void sendEmail(String toEmail, String subject, String text, String emailType) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(toEmail);

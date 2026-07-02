@@ -1,13 +1,10 @@
-import { Component, OnInit, signal, inject, PLATFORM_ID, Input, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, input, inject, PLATFORM_ID, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { trigger, transition, style, animate } from '@angular/animations';
-import { ApiService } from '../../core/services/api.service';
-import { PasswordExpiryStatus } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { APP_ROUTES, ROLE_SECTION_ROUTES } from '../../core/navigation/app-routes';
 
-const SESSION_DISMISS_KEY_PREFIX = 'pwd_expiry_dismissed';
 
 const SUBTEXT: Record<string, string> = {
     REGISTRATION: 'Your current password is still the one set during registration.',
@@ -37,7 +34,7 @@ const SUBTEXT: Record<string, string> = {
         ])
     ],
     template: `
-        @if (visible && status()) {
+        @if (visible && status) {
             <div class="expiry-banner" [@bannerAnim] [class.in-popover]="inPopover">
                 <div class="banner-content">
                     <span class="banner-icon">!</span>
@@ -195,16 +192,17 @@ const SUBTEXT: Record<string, string> = {
     `]
 })
 export class PasswordExpiryBannerComponent implements OnInit {
-    private readonly api = inject(ApiService);
     private readonly router = inject(Router);
     private readonly auth = inject(AuthService);
     private readonly platformId = inject(PLATFORM_ID);
 
-    readonly status = signal<PasswordExpiryStatus | null>(null);
-    visible = false;
-
+    @Input() status: any = null;
     @Input() inPopover = false;
+    
     @Output() visibilityChange = new EventEmitter<boolean>();
+    @Output() dismissed = new EventEmitter<void>();
+
+    visible = false;
 
     ngOnInit(): void {
         if (!isPlatformBrowser(this.platformId)) {
@@ -212,25 +210,14 @@ export class PasswordExpiryBannerComponent implements OnInit {
             return;
         }
 
-        if (sessionStorage.getItem(this.dismissKey()) === 'true') {
-            this.emitVisibility();
-            return;
+        if (this.status) {
+            this.visible = true;
         }
-
-        this.api.getPasswordExpiryStatus().subscribe({
-            next: res => {
-                if (res?.success && res.data?.warningRequired) {
-                    this.status.set(res.data);
-                    this.visible = true;
-                }
-                this.emitVisibility();
-            },
-            error: () => this.emitVisibility()
-        });
+        this.emitVisibility();
     }
 
     bannerTitle(): string {
-        const s = this.status();
+        const s = this.status;
         if (!s) return '';
 
         const days = s.daysUntilExpiry ?? 0;
@@ -248,8 +235,18 @@ export class PasswordExpiryBannerComponent implements OnInit {
     }
 
     bannerSubtext(): string {
-        const type = this.status()?.warningType;
-        return type ? (SUBTEXT[type] ?? '') : '';
+        const s = this.status;
+        if (!s || !s.warningType) return '';
+
+        const days = s.daysUntilExpiry ?? 0;
+        const dayLabel = days < 0
+            ? `${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'} ago`
+            : days === 0
+                ? 'today'
+                : days === 1
+                    ? 'in 1 day'
+                    : `in ${days} days`;
+        return SUBTEXT[s.warningType] ?? '';
     }
 
     goToProfile(): void {
@@ -260,24 +257,11 @@ export class PasswordExpiryBannerComponent implements OnInit {
     dismiss(): void {
         this.visible = false;
         this.emitVisibility();
-        if (isPlatformBrowser(this.platformId)) {
-            sessionStorage.setItem(this.dismissKey(), 'true');
-        }
+        this.dismissed.emit();
     }
 
     private emitVisibility(): void {
-        this.visibilityChange.emit(this.visible && !!this.status());
-    }
-
-    private dismissKey(): string {
-        try {
-            const raw = localStorage.getItem('lms_user');
-            const user = raw ? JSON.parse(raw) : null;
-            const userId = user?.id ?? 'anon';
-            return `${SESSION_DISMISS_KEY_PREFIX}_${userId}`;
-        } catch {
-            return `${SESSION_DISMISS_KEY_PREFIX}_anon`;
-        }
+        this.visibilityChange.emit(this.visible && !!this.status);
     }
 
     private formatDate(iso: string): string {

@@ -196,8 +196,7 @@ textarea.form-control {
     }
 
     &:disabled {
-        opacity: .55;
-        cursor: not-allowed;
+        opacity: 0.65;
     }
 
     &:disabled:active {
@@ -667,8 +666,7 @@ table {
         }
 
         &:disabled {
-            opacity: .4;
-            cursor: not-allowed;
+            opacity: 0.6;
         }
     }
 
@@ -836,3 +834,189 @@ table {
 .full-width {
     grid-column: 1 / -1;
 }
+
+/* Custom Auth Form Styles for Split Layout */
+.auth-split-input-group {
+  position: relative;
+  margin-bottom: 20px;
+  width: 100%;
+}
+.auth-split-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #555;
+  margin-bottom: 6px;
+  text-align: left;
+}
+.auth-split-input-group .form-control {
+  width: 100%;
+  height: 48px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 10px 40px 10px 40px; /* 40px padding on both sides to accommodate left icons and right toggles/autofill */
+  font-size: 14px;
+  color: #333;
+}
+.auth-split-input-group .form-control::placeholder {
+  color: #888;
+}
+.auth-split-input-group .input-wrapper {
+  position: relative;
+  width: 100%;
+}
+.auth-split-input-group .input-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #888;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  pointer-events: none; /* Prevent icon from intercepting clicks */
+}
+.auth-split-input-group .toggle-pw {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #888;
+  font-size: 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+.auth-split-input-group .toggle-pw:focus {
+  outline: none;
+}
+.auth-split-btn {
+  width: 100%;
+  height: 48px;
+  background-color: #ed8b36;
+  color: white;
+  border: none;
+  border-radius: 24px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background-color 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.auth-split-btn:hover {
+  background-color: #d87625;
+}
+.auth-split-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.auth-forgot-link {
+  text-align: center;
+  margin-top: 30px;
+  font-size: 14px;
+}
+.auth-forgot-link a {
+  color: #888;
+  text-decoration: none;
+}
+.auth-forgot-link a:hover {
+  text-decoration: underline;
+  color: #555;
+}
+.auth-split-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 20px 0;
+  color: #888;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+.auth-split-divider::before, .auth-split-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid #ddd;
+}
+.auth-split-divider::before {
+  margin-right: .5em;
+}
+.auth-split-divider::after {
+  margin-left: .5em;
+}
+.auth-split-btn-outline {
+  width: 100%;
+  height: 48px;
+  background-color: transparent;
+  color: #ed8b36;
+  border: 1px solid #ed8b36;
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.auth-split-btn-outline:hover {
+  background-color: #fff4ea;
+}
+
+/* =========================================
+   Angular Material Tabs Traditional Design Overrides
+   ========================================= */
+
+/* Align tabs to the right side */
+.mat-mdc-tab-header {
+  border-bottom: 1px solid #ddd;
+}
+
+.mat-mdc-tab-header .mdc-tab-scroller__scroll-content {
+  justify-content: flex-end;
+  gap: 4px;
+  padding-right: 12px;
+}
+
+/* Remove default underline indicator completely */
+.mat-mdc-tab-header .mdc-tab-indicator__content--underline {
+  display: none !important;
+}
+
+/* Base style for individual tabs to look like traditional blocks */
+.mat-mdc-tab-header .mat-mdc-tab {
+  border: 1px solid #ddd;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  background-color: #f9f9f9;
+  height: 40px; /* shorter traditional tab height */
+  min-width: auto !important;
+  padding: 0 20px !important; /* override default padding */
+  margin-bottom: -1px; /* pull down to overlap with the bottom border */
+  flex-grow: 0 !important; /* prevent tab from stretching */
+  flex: none !important;
+}
+
+/* Style for active tab */
+.mat-mdc-tab-header .mat-mdc-tab.mdc-tab--active {
+  background-color: #ffffff;
+  border-bottom: 1px solid #ffffff; /* hide the container border underneath */
+  position: relative;
+  z-index: 1; /* ensure it overlaps the bottom border */
+}
+
+/* Active tab text color (blue like in screenshot) */
+.mat-mdc-tab-header .mat-mdc-tab.mdc-tab--active .mdc-tab__text-label {
+  color: #1976d2 !important; 
+  font-weight: 500;
+}
+
+/* Inactive tab text color */
+.mat-mdc-tab-header .mat-mdc-tab:not(.mdc-tab--active) .mdc-tab__text-label {
+  color: #333 !important;
+}
+

@@ -22,6 +22,7 @@ import org.springframework.security.web.csrf.InvalidCsrfTokenException;
 import org.springframework.security.web.csrf.MissingCsrfTokenException;
 import org.springframework.security.web.csrf.XorCsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.security.web.session.HttpSessionEventPublisher;
 import org.springframework.util.StringUtils;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import tech.csm.securelms.security.oauth2.OAuth2AuthenticationFailureHandler;
@@ -60,6 +61,8 @@ public class SecurityConfig {
                                 .sessionManagement(session -> session.disable());
                 return http.build();
         }
+
+
 
         @Bean
         @Order(2)
@@ -103,6 +106,8 @@ public class SecurityConfig {
                                                                 "/api/auth/registration-roles",
                                                                 "/api/auth/groups",
                                                                 "/api/auth/login",
+                                                                "/api/auth/otp-request",
+                                                                "/api/auth/verify-otp",
                                                                 "/api/auth/register",
                                                                 "/api/auth/forgot-password",
                                                                 "/api/auth/reset-password/validate",

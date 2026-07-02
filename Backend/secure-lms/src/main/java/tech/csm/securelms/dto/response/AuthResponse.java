@@ -12,4 +12,5 @@ public class AuthResponse {
     private String role;
     private Long roleId;
     private String roleName;
+    private String preAuthToken;
 }

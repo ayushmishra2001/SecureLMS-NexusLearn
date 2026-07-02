@@ -469,6 +469,7 @@ export interface AuditLogEntry {
                         <th>IP Address</th>
                         <th>Browser</th>
                         <th>Date &amp; Time</th>
+                        <th>Details</th>
                       </tr>
                     </thead>
                     <tbody [@listStagger]="auditLogs.length">
@@ -476,7 +477,17 @@ export interface AuditLogEntry {
                         <tr>
                           <td>{{ auditPage * auditPageSize + i + 1 }}</td>
                           <td><strong>{{ log.fullName || '-' }}</strong></td>
-                          <td>{{ log.username || '-' }}</td>
+                            <td>
+                              @if (log.username) {
+                                {{ log.username }}
+                              } @else if (log.contextInfo) {
+                                <span style="color: #888; font-style: italic;" title="Attempted Identifier">
+                                  {{ log.contextInfo }}
+                                </span>
+                              } @else {
+                                -
+                              }
+                            </td>
                           <td style="font-size:12px">{{ log.email || '-' }}</td>
                           <td>
                             @if (log.role) {
@@ -504,6 +515,9 @@ export interface AuditLogEntry {
                           <td>{{ log.browser || '-' }}</td>
                           <td style="font-size:12px; white-space:nowrap">
                             {{ formatDateTime(log.createdAt) }}
+                          </td>
+                          <td style="font-size:12px; max-width: 200px; white-space: normal; overflow-wrap: break-word;">
+                            {{ log.details || '-' }}
                           </td>
                         </tr>
                       }
@@ -844,6 +858,7 @@ auditEventTypes: string[] = [
   'LOGIN_SUCCESS',
   'LOGIN_FAILED',
   'LOGOUT',
+  'SESSION_TIMEOUT',
   'ACCOUNT_LOCKED_TEMPORARY',
   'ACCOUNT_LOCKED_ADMIN_REQUIRED',
   'ACCOUNT_UNLOCKED_ADMIN',
@@ -854,7 +869,7 @@ auditEventTypes: string[] = [
   'USER_LOCK_TOGGLED_BY_ADMIN',
   'USER_ACTIVE_TOGGLED_BY_ADMIN'
 ];
-  // â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”
+  // ——————————————————————————————————————————————————————————————————————————————————
   showUserModal = false;
   showCourseModal = false;
   showModuleModal = false;
@@ -878,8 +893,8 @@ auditEventTypes: string[] = [
   excelLoading = false;
   pdfLoading = false;
 
-  // â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”
-  // â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”
+  // ——————————————————————————————————————————————————————————————————————————————————
+  // ——————————————————————————————————————————————————————————————————————————————————
   userForm = this.fb.group({
     groupId: [null as number | null],
     role: ['STUDENT', Validators.required],
@@ -911,7 +926,7 @@ auditEventTypes: string[] = [
     active: [true]
   });
 
-  // â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”
+  // ——————————————————————————————————————————————————————————————————————————————————
 
   private readonly USER_COLS: ExportColumn[] = [
     { header: 'Username',   field: 'username' },
@@ -964,6 +979,7 @@ auditEventTypes: string[] = [
     { header: 'IP Address', field: 'ipAddress' },
     { header: 'Browser',    field: 'browser' },
     { header: 'Date & Time',field: 'createdAt',  format: 'datetime' },
+    { header: 'Details',    field: 'details' },
   ];
 
   ngOnInit(): void {
@@ -1100,7 +1116,7 @@ auditEventTypes: string[] = [
     });
   }
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬ Users CRUD Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ── Users CRUD ─────────────────────────────────────────────────────────────────
   openUserModal(u?: User): void {
     this.editingUser = u ?? null;
     const defaultRole = this.assignableRoles.find(role => role.code === 'STUDENT')?.code
@@ -1203,7 +1219,7 @@ auditEventTypes: string[] = [
     });
   }
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬ Courses CRUD Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ── Courses CRUD ───────────────────────────────────────────────────────────────
   openCourseModal(c?: Course): void {
     this.editingCourse = c ?? null;
     this.courseForm.reset({
@@ -1235,7 +1251,7 @@ auditEventTypes: string[] = [
     this.showConfirm = true;
   }
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬ Modules CRUD Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ── Modules CRUD ───────────────────────────────────────────────────────────────
   openModuleModal(m?: CourseModule): void {
     this.editingModule = m ?? null;
     this.moduleForm.reset({
@@ -1270,7 +1286,7 @@ auditEventTypes: string[] = [
 
   executeDelete(): void { this.deleteAction?.(); this.showConfirm = false; }
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬ Audit Logs Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ── Audit Logs ────────────────────────────────────────────────────────────────
 loadAuditLogs(): void {
   this.auditLoading = true;
   this.api.getAuditLogs(this.auditTab, this.auditPage, this.auditPageSize, this.auditFilters).subscribe({
@@ -1322,6 +1338,7 @@ auditEventLabel(eventType: string): string {
     LOGIN_SUCCESS: 'Login Success',
     LOGIN_FAILED: 'Login Failed',
     LOGOUT: 'Logout',
+    SESSION_TIMEOUT: 'Session Timeout',
     ACCOUNT_LOCKED_TEMPORARY: 'Temp Locked',
     ACCOUNT_LOCKED_ADMIN_REQUIRED: 'Locked (Admin)',
     ACCOUNT_UNLOCKED_ADMIN: 'Unlocked',

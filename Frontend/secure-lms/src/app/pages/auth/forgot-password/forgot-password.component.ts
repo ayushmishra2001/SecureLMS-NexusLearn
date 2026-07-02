@@ -18,25 +18,30 @@ import { AuthService } from '../../../core/services/auth.service';
 
       @if (!success) {
         <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-          <div class="form-group">
-            <label>Email address</label>
+          <div class="auth-split-input-group">
             <input type="email" class="form-control" formControlName="email"
-                   placeholder="you@example.com" autocomplete="email" />
+                   placeholder="Email address" autocomplete="email" />
+            <span class="material-symbols-outlined input-icon">mail</span>
             @if (f['email'].touched && f['email'].errors?.['required']) {
-              <div class="field-error">Email is required</div>
+              <div class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">Email is required</div>
             }
             @if (f['email'].touched && f['email'].errors?.['email']) {
-              <div class="field-error">Enter a valid email</div>
+              <div class="field-error" style="color: red; font-size: 12px; margin-top: 4px;">Enter a valid email</div>
             }
           </div>
-          <button type="submit" class="btn btn-primary btn-full" [disabled]="loading" style="margin-top:8px">
-            @if (loading) { <span class="spinner"></span> } @else { Send reset link }
+          <button type="submit" class="auth-split-btn" [disabled]="loading" style="margin-top:8px">
+            @if (loading) { <span class="spinner"></span> } @else { SEND RESET LINK }
           </button>
+          
+          <div class="auth-forgot-link">
+            <a routerLink="/login">Back to Sign in</a>
+          </div>
         </form>
+      } @else {
+        <div class="auth-forgot-link">
+          <a routerLink="/login">Back to Sign in</a>
+        </div>
       }
-
-      <div class="divider"><span></span></div>
-      <a routerLink="/login" style="display:block; text-align:center; font-size:14px">← Back to Sign in</a>
     </app-auth-card>
   `
 })

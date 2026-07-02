@@ -43,11 +43,11 @@ import { ADMIN_NAV_GROUPS, ROLE_DASHBOARD_ROUTES, ROLE_SECTION_ROUTES, STUDENT_N
           <div class="card-body">
             @if (!editMode) {
               <div class="info-row"><strong>Username</strong><span>{{ profileData?.username }}</span></div>
-              <div class="info-row"><strong>Email</strong><span>{{ profileData?.email }}</span></div>
-              <div class="info-row"><strong>First Name</strong><span>{{ profileData?.firstName || '—' }}</span></div>
-              <div class="info-row"><strong>Last Name</strong><span>{{ profileData?.lastName || '—' }}</span></div>
-              <div class="info-row"><strong>Contact Number</strong><span>{{ profileData?.contactNumber || '—' }}</span></div>
-              <div class="info-row"><strong>Aadhar Number</strong><span>{{ profileData?.aadharNumber || '—' }}</span></div>
+              <div class="info-row"><strong>Email</strong><span>{{ maskEmail(profileData?.email) }}</span></div>
+              <div class="info-row"><strong>First Name</strong><span>{{ profileData?.firstName || '-' }}</span></div>
+              <div class="info-row"><strong>Last Name</strong><span>{{ profileData?.lastName || '-' }}</span></div>
+              <div class="info-row"><strong>Contact Number</strong><span>{{ maskContact(profileData?.contactNumber) }}</span></div>
+              <div class="info-row"><strong>Aadhar Number</strong><span>{{ maskAadhar(profileData?.aadharNumber) }}</span></div>
               <div class="info-row"><strong>Role</strong><span>{{ profileData?.role }}</span></div>
               <div class="info-row"><strong>Account Status</strong>
                 <span class="badge" [class]="profileData?.active ? 'badge-active' : 'badge-inactive'">
@@ -222,6 +222,30 @@ export class ProfileComponent implements OnInit {
             return p && cp && p !== cp ? { mismatch: true } : null;
         }
     });
+
+    maskEmail(email: string | null | undefined): string {
+      if (!email) return '-';
+      const parts = email.split('@');
+      if (parts.length !== 2) return email;
+      const name = parts[0];
+      if (name.length <= 2) return email;
+      return `${name.substring(0, 2)}${'*'.repeat(name.length - 2)}@${parts[1]}`;
+    }
+
+    maskContact(contact: string | null | undefined): string {
+      if (!contact) return '-';
+      if (contact.length < 4) return contact;
+      return `${contact.substring(0, 2)}${'X'.repeat(contact.length - 4)}${contact.substring(contact.length - 2)}`;
+    }
+
+    maskAadhar(aadhar: string | null | undefined): string {
+      if (!aadhar) return '-';
+      if (aadhar.length === 12) {
+          return `XXXX-XXXX-${aadhar.substring(8)}`;
+      }
+      if (aadhar.length < 4) return aadhar;
+      return `${'X'.repeat(aadhar.length - 4)}${aadhar.substring(aadhar.length - 4)}`;
+    }
 
     get pw() { return this.pwForm.controls; }
     get userInitial(): string { return (this.auth.user()?.username?.charAt(0) ?? 'U').toUpperCase(); }

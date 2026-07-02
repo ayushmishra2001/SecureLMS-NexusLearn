@@ -11,20 +11,27 @@ export const routes: Routes = [
     {
         path: 'profile',
         canActivate: [authGuard, permissionGuard],
+        data: { breadcrumb: 'My Profile' },
         loadComponent: () => import('./pages/profile/profile.component').then(m => m.ProfileComponent)
+    },
+    {
+        path: 'location-master',
+        canActivate: [authGuard],
+        data: { breadcrumb: 'Location Master' },
+        loadComponent: () => import('./pages/admin/location-master/location-master.component').then(m => m.LocationMasterComponent)
     },
     {
         path: 'admin',
         canActivate: [authGuard, permissionGuard],
         children: [
-            { path: 'dashboard', loadComponent: () => import('./pages/admin/admin-dashboard.component').then(m => m.AdminDashboardComponent) },
+            { path: 'dashboard', data: { breadcrumb: 'Dashboard' }, loadComponent: () => import('./pages/admin/admin-dashboard.component').then(m => m.AdminDashboardComponent) },
             { path: 'users', loadComponent: () => import('./pages/admin/admin-dashboard.component').then(m => m.AdminDashboardComponent) },
             { path: 'groups', loadComponent: () => import('./pages/admin/groups.component').then(m => m.GroupsComponent) },
             { path: 'courses', loadComponent: () => import('./pages/admin/admin-dashboard.component').then(m => m.AdminDashboardComponent) },
             { path: 'modules', loadComponent: () => import('./pages/admin/admin-dashboard.component').then(m => m.AdminDashboardComponent) },
             { path: 'enrollments', loadComponent: () => import('./pages/admin/admin-dashboard.component').then(m => m.AdminDashboardComponent) },
-            { path: 'audit-logs', loadComponent: () => import('./pages/admin/admin-dashboard.component').then(m => m.AdminDashboardComponent) },
-            { path: 'profile', loadComponent: () => import('./pages/profile/profile.component').then(m => m.ProfileComponent) },
+            { path: 'audit-logs', data: { breadcrumb: 'Audit Logs' }, loadComponent: () => import('./pages/admin/admin-dashboard.component').then(m => m.AdminDashboardComponent) },
+            { path: 'profile', data: { breadcrumb: 'My Profile' }, loadComponent: () => import('./pages/profile/profile.component').then(m => m.ProfileComponent) },
             {
                 path: 'manage-links',
                 children: [
@@ -34,6 +41,7 @@ export const routes: Routes = [
                     { path: 'role-master', loadComponent: () => import('./pages/admin/role-master.component').then(m => m.RoleMasterComponent) },
                     { path: 'group-master', loadComponent: () => import('./pages/admin/group-master.component').then(m => m.GroupMasterComponent) },
                     { path: 'permissions', loadComponent: () => import('./pages/admin/user-permissions.component').then(m => m.UserPermissionsComponent) },
+                    { path: 'location-master', loadComponent: () => import('./pages/admin/location-master/location-master.component').then(m => m.LocationMasterComponent) },
                     { path: '', redirectTo: 'global-links', pathMatch: 'full' }
                 ]
             },
@@ -43,6 +51,7 @@ export const routes: Routes = [
             { path: 'role-master', redirectTo: 'manage-links/role-master', pathMatch: 'full' },
             { path: 'group-master', redirectTo: 'manage-links/group-master', pathMatch: 'full' },
             { path: 'permissions', redirectTo: 'manage-links/permissions', pathMatch: 'full' },
+            { path: 'location-master', redirectTo: 'manage-links/location-master', pathMatch: 'full' },
             { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
             { path: '**', loadComponent: () => import('./pages/admin/admin-dashboard.component').then(m => m.AdminDashboardComponent) }
         ]
